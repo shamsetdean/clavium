@@ -1,5 +1,5 @@
 Boîte à clés virtuelle
-Copyright © 2026 Shams Guettaf (Dean) — Anthropotech Lab
+Copyright © 2026 Shams Guettaf — Anthropotech Lab
 Tous droits réservés.
 
 Ce projet — code, architecture, choix de conception (armoire à crochets,
