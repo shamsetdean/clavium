@@ -1,0 +1,245 @@
+<!--
+  Boîte à clés virtuelle
+  © 2026 Shams Guettaf (Dean) — Anthropotech Lab. Tous droits réservés.
+  Voir LICENSE.md — reproduction et réutilisation interdites sans autorisation écrite.
+-->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Boîte à clés virtuelle</title>
+<meta name="description" content="Armoire à clés numérique : trousseaux bâtiment et clés de baie, avec étiquettes QR code à imprimer." />
+<meta name="theme-color" content="#eaf5fb" />
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="48x48" href="assets/favicon-48.png" />
+<link rel="shortcut icon" href="assets/favicon.png" />
+
+<!-- Icône d'application (ajout à l'écran d'accueil, favoris…) -->
+<link rel="apple-touch-icon" sizes="180x180" href="assets/icone-180.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="assets/icone-512.png" />
+
+<!-- Open Graph (aperçu lors du partage d'un lien) -->
+<meta property="og:title" content="Boîte à clés virtuelle" />
+<meta property="og:description" content="Armoire à clés numérique : trousseaux bâtiment et clés de baie, avec étiquettes QR code à imprimer." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="assets/og-image.png" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- Dégradés SVG partagés par les icônes "clé" de l'interface -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="degrade-batiment" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#6f6ad8" />
+        <stop offset="100%" stop-color="#4fa7e8" />
+      </linearGradient>
+      <linearGradient id="degrade-baie" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#23b3ba" />
+        <stop offset="100%" stop-color="#57d6b8" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+
+  <!-- ===================== Écran de connexion ===================== -->
+  <section id="ecran-connexion" class="ecran-connexion">
+    <div class="ecran-connexion__panneau">
+      <svg class="ecran-connexion__icone" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="9" r="4.2" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8"/>
+        <path d="M12 13.2 V19 M9.3 19 H14.7" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <h1>Boîte à clés</h1>
+      <p class="ecran-connexion__texte">Identifiez-vous pour ouvrir l'armoire.</p>
+
+      <form id="form-connexion" autocomplete="off">
+        <label class="champ champ--connexion">
+          <span>Mot de passe</span>
+          <input type="password" id="champ-mot-de-passe" name="motdepasse" autocomplete="current-password" required />
+        </label>
+        <p id="erreur-connexion" class="erreur-connexion" hidden>Mot de passe incorrect.</p>
+        <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Déverrouiller</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ===================== Application ===================== -->
+  <div id="application" hidden>
+
+    <header class="entete">
+      <div class="entete__identite">
+        <svg class="entete__icone" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="8" cy="8" r="5" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8"/>
+          <circle cx="8" cy="8" r="1.4" fill="url(#degrade-batiment)"/>
+          <path d="M12 11.5 L21 20.5 M17.5 16 L20 13.5 M15 18.5 L17 16.5" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <h1>Boîte à clés</h1>
+          <p class="entete__sous-titre">Armoire numérique — 100&nbsp;% locale, sans serveur</p>
+        </div>
+      </div>
+
+      <div class="entete__fichier">
+        <span id="etiquette-fichier" class="etiquette-fichier" hidden></span>
+        <input type="file" id="input-importer" accept="application/json" hidden />
+        <button type="button" id="bouton-importer" class="bouton bouton--discret">Importer un JSON</button>
+        <button type="button" id="bouton-exporter" class="bouton bouton--discret">Exporter en JSON</button>
+        <button type="button" id="bouton-ouvrir-fichier" class="bouton bouton--discret" hidden>Ouvrir un fichier local</button>
+        <button type="button" id="bouton-enregistrer-fichier" class="bouton bouton--discret" hidden>Enregistrer</button>
+        <button type="button" id="bouton-deconnexion" class="bouton bouton--discret" hidden>Se déconnecter</button>
+      </div>
+    </header>
+
+    <main class="conteneur">
+
+      <section class="barre-outils">
+        <div class="barre-outils__recherche">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="icone-recherche">
+            <circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <input type="search" id="champ-recherche" placeholder="Rechercher un trousseau, un code, un détenteur…" aria-label="Rechercher" />
+        </div>
+
+        <div class="barre-outils__filtres">
+          <select id="filtre-statut" aria-label="Filtrer par statut">
+            <option value="toutes">Tous les statuts</option>
+            <option value="disponible">Suspendus</option>
+            <option value="emprunte">Décrochés</option>
+          </select>
+          <select id="filtre-type" aria-label="Filtrer par type">
+            <option value="toutes">Tous les types</option>
+            <option value="batiment">Trousseaux bâtiment</option>
+            <option value="baie">Clés de baie</option>
+          </select>
+          <button type="button" id="bouton-ajouter" class="bouton bouton--brass">+ Ajouter un trousseau</button>
+        </div>
+      </section>
+
+      <p id="compteur-resultats" class="compteur" aria-live="polite"></p>
+
+      <div class="armoire">
+        <div class="armoire__plaque">Armoire à clés</div>
+        <section id="grille-creneaux" class="grille-creneaux" aria-live="polite"></section>
+      </div>
+
+      <div id="etat-vide" class="etat-vide" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true" class="etat-vide__icone">
+          <circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M12.5 12.5 L20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <p>Aucun trousseau ne correspond à cette recherche.</p>
+      </div>
+
+    </main>
+
+    <!-- Gabarit d'un crochet de l'armoire, dupliqué par js/app.js -->
+    <template id="gabarit-creneau">
+      <article class="creneau" tabindex="0">
+        <div class="creneau__support">
+          <svg class="creneau__crochet" viewBox="0 0 40 26" aria-hidden="true">
+            <path d="M8 2 v7 a12 12 0 0 0 24 0 v-7" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/>
+          </svg>
+          <span class="creneau__numero"></span>
+        </div>
+
+        <div class="creneau__pendu">
+          <span class="anneau" aria-hidden="true"></span>
+          <div class="etiquette">
+            <span class="etiquette__type-icone" aria-hidden="true"></span>
+            <h2 class="etiquette__nom"></h2>
+            <p class="etiquette__type-libelle"></p>
+            <p class="etiquette__cles"></p>
+          </div>
+        </div>
+
+        <div class="creneau__absent">
+          <div class="ticket">
+            <span class="ticket__label">Sorti par</span>
+            <span class="ticket__detenteur"></span>
+            <span class="ticket__date"></span>
+          </div>
+        </div>
+
+        <button type="button" class="creneau__action bouton bouton--pleine-largeur"></button>
+      </article>
+    </template>
+
+    <!-- Boîte de dialogue : ajout / modification d'un trousseau -->
+    <dialog id="dialogue-form" class="dialogue">
+      <form id="form-trousseau" method="dialog" class="formulaire">
+        <h2 id="titre-dialogue-form">Ajouter un trousseau</h2>
+        <input type="hidden" name="id" />
+
+        <label class="champ">
+          <span>Nom du trousseau <em>(requis)</em></span>
+          <input type="text" name="nom" required maxlength="80" placeholder="Ex. Bâtiment technique" />
+        </label>
+
+        <div class="champ champ--ligne">
+          <label class="champ">
+            <span>Type</span>
+            <select name="type" id="champ-type-form">
+              <option value="batiment">Trousseau bâtiment (plusieurs clés)</option>
+              <option value="baie">Clé de baie uniquement</option>
+            </select>
+          </label>
+          <label class="champ champ--crochet">
+            <span>N° de crochet</span>
+            <input type="number" name="crochet" min="1" max="999" />
+          </label>
+        </div>
+
+        <div class="champ">
+          <span id="libelle-section-clefs">Clés du trousseau</span>
+          <div id="liste-clefs-form" class="liste-clefs-form"></div>
+          <button type="button" id="bouton-ajouter-clef" class="bouton bouton--discret bouton--petit">+ Ajouter une clé</button>
+        </div>
+
+        <label class="champ">
+          <span>Notes</span>
+          <textarea name="notes" rows="3" maxlength="300" placeholder="Informations complémentaires…"></textarea>
+        </label>
+
+        <div class="formulaire__actions">
+          <button type="button" id="bouton-annuler-form" class="bouton bouton--discret">Annuler</button>
+          <button type="submit" class="bouton bouton--brass">Enregistrer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Boîte de dialogue : détail, historique et QR code d'un trousseau -->
+    <dialog id="dialogue-detail" class="dialogue dialogue--large">
+      <button type="button" id="bouton-fermer-detail" class="dialogue__fermer" aria-label="Fermer">✕</button>
+      <div id="detail-contenu"></div>
+    </dialog>
+
+    <footer class="pied-de-page">
+      <p>Application statique — aucune donnée n'est envoyée à un serveur. Pensez à exporter régulièrement votre fichier JSON pour le sauvegarder.</p>
+      <p class="pied-de-page__copyright">© 2026 Shams Guettaf (Dean) — Anthropotech Lab. Tous droits réservés.</p>
+    </footer>
+
+  </div>
+
+  <!-- Zone dédiée à l'impression des étiquettes (invisible à l'écran) -->
+  <div id="zone-impression" class="etiquette-impression" aria-hidden="true">
+    <p class="etiquette-impression__type"></p>
+    <p class="etiquette-impression__nom"></p>
+    <div class="etiquette-impression__qr"></div>
+    <p class="etiquette-impression__codes"></p>
+    <p class="etiquette-impression__crochet"></p>
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/vendor/qrcode.js"></script>
+  <script src="js/vendor/qrcode-utf8.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
