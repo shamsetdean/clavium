@@ -77,28 +77,51 @@ ou l'API fichiers. Pour ajouter une fonctionnalité qui touche aux données
 objets dans `data/keys.default.json` et le formulaire correspondant — le reste
 de l'application n'a pas à changer.
 
-## Écran de connexion — ce qu'il protège vraiment
+## Écran de connexion — comptes, rôles et ce qu'ils protègent vraiment
 
-L'accès à l'armoire est verrouillé par un mot de passe (`js/auth.js`) : la
-saisie est hachée en SHA-256 via l'API Web Crypto du navigateur, comparée à
-une empreinte stockée dans le code, puis la session reste ouverte tant que
-l'onglet n'est pas fermé (`sessionStorage`). Aucune donnée n'est envoyée où
-que ce soit.
+Il n'y a plus de mot de passe unique codé dans l'application. À la toute
+première ouverture (aucun compte enregistré), l'écran propose de **créer le
+compte administrateur** : nom + mot de passe, choisis sur place. Le mot de
+passe est haché en SHA-256 (Web Crypto API du navigateur) et le résultat est
+stocké dans les données elles-mêmes (`donnees.utilisateurs`) — jamais en
+clair, ni dans un fichier livré, ni dans ce README. Ensuite, l'écran devient
+un formulaire de connexion classique (nom + mot de passe).
 
-**Mot de passe par défaut : `boiteacles`** — à changer avant toute mise en
-ligne. Comme le code source d'une page GitHub Pages est public, ce verrou
-empêche un accès accidentel ou une consultation rapide par-dessus l'épaule,
-mais pas quelqu'un de déterminé qui lirait `js/auth.js` : ce n'est pas une
-sécurité forte, seulement une porte fermée à clé, pas un coffre-fort. Pour
-changer le mot de passe, générez la nouvelle empreinte dans la console du
-navigateur :
+Deux rôles :
 
-```js
-crypto.subtle.digest("SHA-256", new TextEncoder().encode("votre-nouveau-mot-de-passe"))
-  .then(buf => console.log(Array.from(new Uint8Array(buf)).map(o => o.toString(16).padStart(2, "0")).join("")));
-```
+- **Administrateur** — accès complet : ajouter/modifier/retirer un
+  trousseau, importer un JSON, ouvrir/enregistrer un fichier local, créer et
+  supprimer des comptes (bouton *Utilisateurs* dans l'en-tête).
+- **Accès limité** — peut consulter l'armoire (recherche, filtres, détail,
+  QR code, historique), emprunter et restituer un trousseau. Rien d'autre :
+  les boutons Ajouter, Importer, Ouvrir/Enregistrer un fichier, Utilisateurs
+  et Modifier/Retirer sont invisibles pour ce rôle.
 
-Copiez le résultat dans `EMPREINTE_ATTENDUE` en haut de `js/auth.js`.
+Comme pour toute application 100 % statique : ce système distingue les rôles
+dans l'interface et évite un accès accidentel, mais **ce n'est pas une
+sécurité forte** face à quelqu'un de déterminé qui lirait le code source
+(public sur GitHub Pages). Les restrictions de rôle sont appliquées côté
+interface, pas comme une barrière serveur infranchissable.
+
+### Notification par email à chaque modification
+
+À chaque ajout, modification, emprunt, restitution ou changement dans la
+liste des utilisateurs, l'application :
+1. télécharge automatiquement une copie horodatée du JSON à jour ;
+2. ouvre un brouillon email pré-rempli vers `shamsetdean@gmail.com`.
+
+**Limite technique assumée, pas un manque de soin** : un navigateur ne peut
+ni joindre un fichier à un email automatiquement, ni l'envoyer sans action
+humaine — ce sont des restrictions de sécurité du web, pas un choix de ce
+projet. Il reste donc un geste manuel : joindre le fichier qui vient d'être
+téléchargé, puis cliquer sur Envoyer dans le client email. Aucun service
+tiers n'est utilisé pour cet envoi (cohérent avec l'absence de serveur et la
+protection des données) ; la contrepartie est cette étape manuelle.
+
+Si un envoi vraiment automatique et silencieux est souhaité malgré tout, il
+faudrait passer par un service tiers (ex. EmailJS, Resend) avec une clé
+d'API exposée côté client et le contenu de l'armoire transitant par ses
+serveurs — un compromis à valider explicitement avant de l'implémenter.
 
 ## Où vivent les données
 
@@ -196,6 +219,22 @@ Chaque trousseau suit cette forme (voir `data/keys.default.json`) :
 (décroché). `type` vaut `"batiment"` (plusieurs `clefs`) ou `"baie"` (une
 seule entrée dans `clefs`) — ce sont les deux seuls types prévus par le
 formulaire (`index.html` / `js/app.js`, constante `LIBELLES_TYPE`).
+
+Les comptes suivent cette forme (champ `utilisateurs`, géré par l'écran de
+connexion et la boîte de dialogue *Utilisateurs*, jamais à éditer à la main) :
+
+```json
+{
+  "id": "u-0001",
+  "nom": "Shams",
+  "role": "admin",
+  "empreinte": "<hash SHA-256, 64 caractères hexadécimaux>"
+}
+```
+
+`role` vaut `"admin"` ou `"utilisateur"` (accès limité). `empreinte` n'est
+jamais le mot de passe en clair — voir la section *Écran de connexion*
+ci-dessus.
 
 ## Compatibilité
 

@@ -56,16 +56,44 @@
         <path d="M12 13.2 V19 M9.3 19 H14.7" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
       <h1>Boîte à clés</h1>
-      <p class="ecran-connexion__texte">Identifiez-vous pour ouvrir l'armoire.</p>
 
-      <form id="form-connexion" autocomplete="off">
-        <label class="champ champ--connexion">
-          <span>Mot de passe</span>
-          <input type="password" id="champ-mot-de-passe" name="motdepasse" autocomplete="current-password" required />
-        </label>
-        <p id="erreur-connexion" class="erreur-connexion" hidden>Mot de passe incorrect.</p>
-        <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Déverrouiller</button>
-      </form>
+      <!-- Aucun compte n'existe encore : l'administrateur crée le sien -->
+      <div id="bloc-initialisation" hidden>
+        <p class="ecran-connexion__texte">Aucun compte n'existe encore. Créez le vôtre — vous serez administrateur de l'armoire.</p>
+        <form id="form-initialisation" autocomplete="off">
+          <label class="champ champ--connexion">
+            <span>Votre nom</span>
+            <input type="text" name="nom" maxlength="40" autocomplete="username" required />
+          </label>
+          <label class="champ champ--connexion">
+            <span>Mot de passe</span>
+            <input type="password" name="motdepasse" autocomplete="new-password" minlength="6" required />
+          </label>
+          <label class="champ champ--connexion">
+            <span>Confirmer le mot de passe</span>
+            <input type="password" name="confirmation" autocomplete="new-password" minlength="6" required />
+          </label>
+          <p id="erreur-initialisation" class="erreur-connexion" hidden></p>
+          <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Créer le compte administrateur</button>
+        </form>
+      </div>
+
+      <!-- Un ou plusieurs comptes existent : connexion normale -->
+      <div id="bloc-connexion">
+        <p class="ecran-connexion__texte">Identifiez-vous pour ouvrir l'armoire.</p>
+        <form id="form-connexion" autocomplete="off">
+          <label class="champ champ--connexion">
+            <span>Nom</span>
+            <input type="text" name="nom" maxlength="40" autocomplete="username" required />
+          </label>
+          <label class="champ champ--connexion">
+            <span>Mot de passe</span>
+            <input type="password" name="motdepasse" autocomplete="current-password" required />
+          </label>
+          <p id="erreur-connexion" class="erreur-connexion" hidden>Nom ou mot de passe incorrect.</p>
+          <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Déverrouiller</button>
+        </form>
+      </div>
     </div>
   </section>
 
@@ -92,6 +120,7 @@
         <button type="button" id="bouton-exporter" class="bouton bouton--discret">Exporter en JSON</button>
         <button type="button" id="bouton-ouvrir-fichier" class="bouton bouton--discret" hidden>Ouvrir un fichier local</button>
         <button type="button" id="bouton-enregistrer-fichier" class="bouton bouton--discret" hidden>Enregistrer</button>
+        <button type="button" id="bouton-utilisateurs" class="bouton bouton--discret" hidden>Utilisateurs</button>
         <button type="button" id="bouton-deconnexion" class="bouton bouton--discret" hidden>Se déconnecter</button>
       </div>
     </header>
@@ -218,6 +247,35 @@
     <dialog id="dialogue-detail" class="dialogue dialogue--large">
       <button type="button" id="bouton-fermer-detail" class="dialogue__fermer" aria-label="Fermer">✕</button>
       <div id="detail-contenu"></div>
+    </dialog>
+
+    <!-- Boîte de dialogue : gestion des utilisateurs (admin uniquement) -->
+    <dialog id="dialogue-utilisateurs" class="dialogue">
+      <button type="button" id="bouton-fermer-utilisateurs" class="dialogue__fermer" aria-label="Fermer">✕</button>
+      <h2>Utilisateurs</h2>
+      <p class="dialogue__intro">Un compte « Accès limité » peut consulter l'armoire, emprunter et restituer un trousseau — rien d'autre.</p>
+      <ul id="liste-utilisateurs" class="liste-utilisateurs"></ul>
+
+      <form id="form-utilisateur" class="formulaire">
+        <h3>Ajouter un utilisateur</h3>
+        <label class="champ">
+          <span>Nom</span>
+          <input type="text" name="nom" maxlength="40" required />
+        </label>
+        <label class="champ">
+          <span>Mot de passe</span>
+          <input type="password" name="motdepasse" minlength="6" autocomplete="new-password" required />
+        </label>
+        <label class="champ">
+          <span>Rôle</span>
+          <select name="role">
+            <option value="utilisateur">Accès limité (consulter, emprunter, restituer)</option>
+            <option value="admin">Administrateur (accès complet)</option>
+          </select>
+        </label>
+        <p id="erreur-utilisateur" class="erreur-connexion" hidden></p>
+        <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Ajouter</button>
+      </form>
     </dialog>
 
     <footer class="pied-de-page">
