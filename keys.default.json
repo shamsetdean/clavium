@@ -1,0 +1,98 @@
+{
+  "version": 2,
+  "trousseaux": [
+    {
+      "id": "t-0001",
+      "nom": "Bâtiment technique",
+      "type": "batiment",
+      "crochet": 1,
+      "clefs": [
+        { "id": "c-01", "repere": "Porte principale", "code": "BT-01" },
+        { "id": "c-02", "repere": "Local baie", "code": "BT-02" },
+        { "id": "c-03", "repere": "Sas technique", "code": "BT-03" }
+      ],
+      "statut": "disponible",
+      "detenteur": null,
+      "dateEmprunt": null,
+      "dateRetourPrevue": null,
+      "notes": "Trousseau complet du bâtiment où se trouve la baie.",
+      "historique": [
+        {
+          "action": "creation",
+          "personne": "Système",
+          "date": "2026-06-01T09:00:00.000Z",
+          "commentaire": "Trousseau enregistré dans la boîte."
+        }
+      ]
+    },
+    {
+      "id": "t-0002",
+      "nom": "Baie serveur",
+      "type": "baie",
+      "crochet": 2,
+      "clefs": [{ "id": "c-01", "repere": "Baie serveur", "code": "BAIE-01" }],
+      "statut": "emprunte",
+      "detenteur": "Bertrand",
+      "dateEmprunt": "2026-07-20T07:30:00.000Z",
+      "dateRetourPrevue": null,
+      "notes": "Clé unique, n'ouvre que la baie.",
+      "historique": [
+        {
+          "action": "creation",
+          "personne": "Système",
+          "date": "2026-06-01T09:00:00.000Z",
+          "commentaire": "Trousseau enregistré dans la boîte."
+        },
+        {
+          "action": "emprunt",
+          "personne": "Bertrand",
+          "date": "2026-07-20T07:30:00.000Z",
+          "commentaire": "Maintenance serveur."
+        }
+      ]
+    },
+    {
+      "id": "t-0003",
+      "nom": "Mairie annexe",
+      "type": "batiment",
+      "crochet": 3,
+      "clefs": [
+        { "id": "c-01", "repere": "Portail", "code": "MA-01" },
+        { "id": "c-02", "repere": "Accueil", "code": "MA-02" }
+      ],
+      "statut": "disponible",
+      "detenteur": null,
+      "dateEmprunt": null,
+      "dateRetourPrevue": null,
+      "notes": "",
+      "historique": [
+        {
+          "action": "creation",
+          "personne": "Système",
+          "date": "2026-06-01T09:00:00.000Z",
+          "commentaire": "Trousseau enregistré dans la boîte."
+        }
+      ]
+    },
+    {
+      "id": "t-0004",
+      "nom": "Baie de brassage - étage 1",
+      "type": "baie",
+      "crochet": 4,
+      "clefs": [{ "id": "c-01", "repere": "Baie étage 1", "code": "BAIE-02" }],
+      "statut": "disponible",
+      "detenteur": null,
+      "dateEmprunt": null,
+      "dateRetourPrevue": null,
+      "notes": "",
+      "historique": [
+        {
+          "action": "creation",
+          "personne": "Système",
+          "date": "2026-06-01T09:00:00.000Z",
+          "commentaire": "Trousseau enregistré dans la boîte."
+        }
+      ]
+    }
+  ]
+}
