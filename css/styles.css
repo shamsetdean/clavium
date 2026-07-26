@@ -50,6 +50,13 @@
 
 * { box-sizing: border-box; }
 
+/* Garantit que l'attribut HTML "hidden" masque toujours l'élément, même si
+   une règle CSS plus loin dans le fichier lui donne un display explicite
+   (ex. .ecran-connexion { display: flex }) à spécificité égale. Sans ce
+   correctif, l'écran de connexion et l'armoire pouvaient s'afficher tous
+   les deux en même temps, l'un sous l'autre. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   min-height: 100vh;
@@ -227,7 +234,7 @@ h1, h2, h3, h4 {
   border-radius: 999px;
   border: 1px solid var(--ligne);
   background: var(--verre-vif);
-  font-size: 0.9rem;
+  font-size: 16px;
 }
 #champ-recherche:focus-visible { outline: 2px solid var(--accent-a); }
 
@@ -439,7 +446,7 @@ dialog.dialogue::backdrop { background: rgba(60, 80, 150, 0.25); backdrop-filter
   border: 1px solid var(--ligne);
   background: rgba(255, 255, 255, 0.75);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: 16px; /* jamais moins : Safari iOS zoome automatiquement sous 16px au focus */
 }
 .champ input:focus-visible, .champ select:focus-visible, .champ textarea:focus-visible { outline: 2px solid var(--accent-a); }
 .champ textarea { resize: vertical; }
@@ -607,12 +614,41 @@ dialog.dialogue::backdrop { background: rgba(60, 80, 150, 0.25); backdrop-filter
 }
 
 @media (max-width: 560px) {
-  .entete { padding: 1rem; }
-  .conteneur { padding: 1.1rem; }
+  .entete {
+    padding: 0.9rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .entete__fichier {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .entete__fichier .bouton { flex: 1 1 auto; text-align: center; font-size: 0.8rem; padding: 0.45rem 0.6rem; }
+
+  .conteneur { padding: 1rem; }
+
   .barre-outils { flex-direction: column; align-items: stretch; }
   .barre-outils__filtres { justify-content: stretch; }
-  .barre-outils__filtres select, .barre-outils__filtres button { flex: 1; }
-  .grille-creneaux { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1.8rem 0.7rem; }
+  .barre-outils__filtres select, .barre-outils__filtres button { flex: 1 1 100%; }
+
+  .armoire { padding: 1rem; border-radius: 20px; }
+  .grille-creneaux { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1.8rem 0.7rem; padding: 1.6rem 0.8rem 1rem; }
+
   .champ--ligne { flex-direction: column; gap: 0.85rem; }
   .champ--crochet { max-width: none; }
+
+  dialog.dialogue { padding: 1.1rem; border-radius: 18px; max-height: calc(100vh - 2rem); overflow-y: auto; }
+
+  .ecran-connexion { padding: 1rem; }
+  .ecran-connexion__panneau { padding: 1.8rem 1.4rem; }
+
+  .detail__qr { flex-direction: column; align-items: flex-start; }
+  .detail__actions .bouton { flex: 1 1 auto; }
+}
+
+@media (max-width: 400px) {
+  .barre-outils__filtres { flex-direction: column; }
+  .ligne-clef { grid-template-columns: 1fr; }
+  .ligne-clef__supprimer { justify-self: end; }
 }
