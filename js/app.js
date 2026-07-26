@@ -21,13 +21,22 @@
  */
 
 const App = (() => {
+  /** Adresse recevant une copie du JSON à chaque modification (voir notifierParEmail). */
+  const EMAIL_NOTIFICATION = "shamsetdean@gmail.com";
+
   /** État en mémoire de l'application */
   const etat = {
-    donnees: { version: 2, trousseaux: [] },
+    donnees: { version: 2, trousseaux: [], utilisateurs: [] },
+    utilisateurCourant: null, // { nom, role }
     recherche: "",
     filtreStatut: "toutes",  // toutes | disponible | emprunte
     filtreType: "toutes",    // toutes | batiment | baie
     trousseauEnEdition: null,
+  };
+
+  const LIBELLES_ROLE = {
+    admin: "Administrateur",
+    utilisateur: "Accès limité",
   };
 
   const LIBELLES_TYPE = {
@@ -82,9 +91,48 @@ const App = (() => {
     els.gabaritCreneau = document.getElementById("gabarit-creneau");
 
     els.zoneImpression = document.getElementById("zone-impression");
+
+    els.boutonUtilisateurs = document.getElementById("bouton-utilisateurs");
+    els.dialogueUtilisateurs = document.getElementById("dialogue-utilisateurs");
+    els.boutonFermerUtilisateurs = document.getElementById("bouton-fermer-utilisateurs");
+    els.listeUtilisateurs = document.getElementById("liste-utilisateurs");
+    els.formUtilisateur = document.getElementById("form-utilisateur");
+    els.erreurUtilisateur = document.getElementById("erreur-utilisateur");
   }
 
   // -- Utilitaires ---------------------------------------------------------
+
+  function estAdmin() {
+    return etat.utilisateurCourant?.role === "admin";
+  }
+
+  /**
+   * Prépare une copie de sauvegarde après une modification : télécharge le
+   * JSON à jour et ouvre un brouillon email pré-rempli vers EMAIL_NOTIFICATION.
+   *
+   * Limite technique assumée (voir README) : un navigateur ne peut ni
+   * joindre un fichier automatiquement à un email, ni l'envoyer sans action
+   * humaine. Cette fonction fait donc le maximum possible sans service tiers
+   * ni serveur : télécharger + préparer le brouillon. Il reste un geste
+   * manuel (joindre le fichier téléchargé, cliquer sur Envoyer).
+   */
+  function notifierParEmail(resume) {
+    const horodatage = new Date().toISOString().replace(/[:.]/g, "-");
+    const nomFichier = `boite-a-cles-${horodatage}.json`;
+    Depot.exporterVersFichier(etat.donnees, nomFichier);
+
+    const sujet = encodeURIComponent(`Boîte à clés — mise à jour : ${resume}`);
+    const corps = encodeURIComponent(
+      `Modification enregistrée dans l'armoire à clés : ${resume}\n` +
+        `Par : ${etat.utilisateurCourant?.nom || "—"}\n` +
+        `Date : ${new Date().toLocaleString("fr-FR")}\n\n` +
+        `Le fichier "${nomFichier}" vient d'être téléchargé sur cet ordinateur. ` +
+        `Un navigateur ne peut pas joindre de fichier automatiquement à un email : ` +
+        `merci de le joindre à ce message avant de l'envoyer.\n\n` +
+        `— Boîte à clés virtuelle`
+    );
+    window.location.href = `mailto:${EMAIL_NOTIFICATION}?subject=${sujet}&body=${corps}`;
+  }
 
   function genererId(prefixe) {
     return `${prefixe}-` + Math.random().toString(36).slice(2, 9);
@@ -118,7 +166,7 @@ const App = (() => {
   }
 
   async function persister() {
-    Storage.sauvegarderLocal(etat.donnees);
+    Depot.sauvegarderLocal(etat.donnees);
     if (els.boutonEnregistrerFichier.hidden === false) {
       els.boutonEnregistrerFichier.classList.add("a-enregistrer");
     }
@@ -243,6 +291,7 @@ const App = (() => {
     persister();
     rendre();
     if (etat.trousseauEnEdition === id) ouvrirDetail(id);
+    notifierParEmail(`« ${trousseau.nom} » décroché par ${trousseau.detenteur}`);
   }
 
   function restituerTrousseau(id) {
@@ -257,9 +306,11 @@ const App = (() => {
     persister();
     rendre();
     if (etat.trousseauEnEdition === id) ouvrirDetail(id);
+    notifierParEmail(`« ${trousseau.nom} » raccroché (rendu par ${detenteurPrecedent || "—"})`);
   }
 
   function supprimerTrousseau(id) {
+    if (!estAdmin()) return;
     const trousseau = trouverTrousseau(id);
     if (!trousseau) return;
     const confirme = window.confirm(`Retirer définitivement « ${trousseau.nom} » de l'armoire ?`);
@@ -268,6 +319,7 @@ const App = (() => {
     persister();
     rendre();
     fermerDetail();
+    notifierParEmail(`« ${trousseau.nom} » retiré de l'armoire`);
   }
 
   // -- Formulaire : lignes de clés dynamiques ------------------------------
@@ -307,6 +359,7 @@ const App = (() => {
   }
 
   function ouvrirFormulaire(id = null) {
+    if (!estAdmin()) return;
     const trousseau = id ? trouverTrousseau(id) : null;
     els.formTrousseau.reset();
     els.formTrousseau.elements["id"].value = trousseau ? trousseau.id : "";
@@ -386,6 +439,7 @@ const App = (() => {
     persister();
     rendre();
     els.dialogueForm.close();
+    notifierParEmail(id ? `« ${nom} » modifié` : `« ${nom} » ajouté à l'armoire`);
   }
 
   // -- Panneau détail / historique / QR ------------------------------------
@@ -426,11 +480,11 @@ const App = (() => {
       ${trousseau.notes ? `<p class="detail__notes">${echapper(trousseau.notes)}</p>` : ""}
 
       <div class="detail__actions">
-        <button type="button" class="bouton bouton--discret" data-action="modifier">Modifier</button>
+        ${estAdmin() ? '<button type="button" class="bouton bouton--discret" data-action="modifier">Modifier</button>' : ""}
         <button type="button" class="bouton bouton--discret" data-action="${trousseau.statut === "emprunte" ? "restituer" : "emprunter"}">
           ${trousseau.statut === "emprunte" ? "Restituer" : "Emprunter"}
         </button>
-        <button type="button" class="bouton bouton--danger" data-action="supprimer">Retirer</button>
+        ${estAdmin() ? '<button type="button" class="bouton bouton--danger" data-action="supprimer">Retirer</button>' : ""}
       </div>
 
       <div class="detail__qr">
@@ -447,13 +501,13 @@ const App = (() => {
 
     els.detailContenu.querySelector(".detail__qr-image").innerHTML = genererQrSvg(contenuQr(trousseau));
 
-    els.detailContenu.querySelector('[data-action="modifier"]').addEventListener("click", () => {
+    els.detailContenu.querySelector('[data-action="modifier"]')?.addEventListener("click", () => {
       fermerDetail();
       ouvrirFormulaire(trousseau.id);
     });
     els.detailContenu.querySelector('[data-action="emprunter"]')?.addEventListener("click", () => demarrerEmprunt(trousseau.id));
     els.detailContenu.querySelector('[data-action="restituer"]')?.addEventListener("click", () => restituerTrousseau(trousseau.id));
-    els.detailContenu.querySelector('[data-action="supprimer"]').addEventListener("click", () => supprimerTrousseau(trousseau.id));
+    els.detailContenu.querySelector('[data-action="supprimer"]')?.addEventListener("click", () => supprimerTrousseau(trousseau.id));
     els.detailContenu.querySelector('[data-action="imprimer"]').addEventListener("click", () => imprimerEtiquette(trousseau));
 
     els.dialogueDetail.showModal();
@@ -491,8 +545,9 @@ const App = (() => {
   // -- Import / export / fichier local -------------------------------------
 
   async function gererImport(fichier) {
+    if (!estAdmin()) return;
     try {
-      const donnees = await Storage.importerDepuisInput(fichier);
+      const donnees = await Depot.importerDepuisInput(fichier);
       etat.donnees = donnees;
       persister();
       rendre();
@@ -502,12 +557,13 @@ const App = (() => {
   }
 
   function gererExport() {
-    Storage.exporterVersFichier(etat.donnees);
+    Depot.exporterVersFichier(etat.donnees);
   }
 
   async function gererOuvertureFichier() {
+    if (!estAdmin()) return;
     try {
-      const { donnees, nomFichier } = await Storage.ouvrirFichierLocal();
+      const { donnees, nomFichier } = await Depot.ouvrirFichierLocal();
       etat.donnees = donnees;
       persister();
       rendre();
@@ -521,12 +577,93 @@ const App = (() => {
   }
 
   async function gererEnregistrementFichier() {
+    if (!estAdmin()) return;
     try {
-      await Storage.enregistrerDansFichierOuvert(etat.donnees);
+      await Depot.enregistrerDansFichierOuvert(etat.donnees);
       els.boutonEnregistrerFichier.classList.remove("a-enregistrer");
     } catch (erreur) {
       window.alert(erreur.message);
     }
+  }
+
+  // -- Gestion des utilisateurs (admin uniquement) --------------------------
+
+  async function hacherSHA256(texte) {
+    const octets = new TextEncoder().encode(texte);
+    const empreinte = await crypto.subtle.digest("SHA-256", octets);
+    return Array.from(new Uint8Array(empreinte)).map((o) => o.toString(16).padStart(2, "0")).join("");
+  }
+
+  function ouvrirDialogueUtilisateurs() {
+    if (!estAdmin()) return;
+    els.erreurUtilisateur.hidden = true;
+    els.formUtilisateur.reset();
+    rendreListeUtilisateurs();
+    els.dialogueUtilisateurs.showModal();
+  }
+
+  function rendreListeUtilisateurs() {
+    els.listeUtilisateurs.innerHTML = "";
+    for (const utilisateur of etat.donnees.utilisateurs) {
+      const li = document.createElement("li");
+      li.className = "ligne-utilisateur";
+      const estSoiMeme = normaliserNomComparaison(utilisateur.nom) === normaliserNomComparaison(etat.utilisateurCourant.nom);
+      const dernierAdmin =
+        utilisateur.role === "admin" && etat.donnees.utilisateurs.filter((u) => u.role === "admin").length <= 1;
+
+      li.innerHTML = `
+        <span class="ligne-utilisateur__nom">${echapper(utilisateur.nom)}${estSoiMeme ? " (vous)" : ""}</span>
+        <span class="pastille pastille--role-${utilisateur.role}">${LIBELLES_ROLE[utilisateur.role] || utilisateur.role}</span>
+        <button type="button" class="ligne-utilisateur__supprimer" aria-label="Supprimer ${echapper(utilisateur.nom)}" ${dernierAdmin ? "disabled title=\"Il doit rester au moins un administrateur\"" : ""}>✕</button>
+      `;
+      li.querySelector(".ligne-utilisateur__supprimer").addEventListener("click", () => supprimerUtilisateur(utilisateur.id));
+      els.listeUtilisateurs.appendChild(li);
+    }
+  }
+
+  function normaliserNomComparaison(nom) {
+    return (nom || "").trim().toLowerCase();
+  }
+
+  async function soumettreUtilisateur(evt) {
+    evt.preventDefault();
+    els.erreurUtilisateur.hidden = true;
+    const donneesForm = new FormData(els.formUtilisateur);
+    const nom = donneesForm.get("nom").trim();
+    const motDePasse = donneesForm.get("motdepasse");
+    const role = donneesForm.get("role");
+
+    if (!nom || motDePasse.length < 6) {
+      els.erreurUtilisateur.textContent = "Nom requis, mot de passe d'au moins 6 caractères.";
+      els.erreurUtilisateur.hidden = false;
+      return;
+    }
+    if (etat.donnees.utilisateurs.some((u) => normaliserNomComparaison(u.nom) === normaliserNomComparaison(nom))) {
+      els.erreurUtilisateur.textContent = "Ce nom est déjà utilisé par un autre compte.";
+      els.erreurUtilisateur.hidden = false;
+      return;
+    }
+
+    const empreinte = await hacherSHA256(motDePasse);
+    etat.donnees.utilisateurs.push({ id: genererId("u"), nom, role, empreinte });
+    persister();
+    rendreListeUtilisateurs();
+    els.formUtilisateur.reset();
+    notifierParEmail(`utilisateur « ${nom} » ajouté (${LIBELLES_ROLE[role]})`);
+  }
+
+  function supprimerUtilisateur(id) {
+    const utilisateur = etat.donnees.utilisateurs.find((u) => u.id === id);
+    if (!utilisateur) return;
+    const dernierAdmin =
+      utilisateur.role === "admin" && etat.donnees.utilisateurs.filter((u) => u.role === "admin").length <= 1;
+    if (dernierAdmin) return;
+    const confirme = window.confirm(`Supprimer le compte de « ${utilisateur.nom} » ?`);
+    if (!confirme) return;
+    etat.donnees.utilisateurs = etat.donnees.utilisateurs.filter((u) => u.id !== id);
+    persister();
+    rendreListeUtilisateurs();
+    notifierParEmail(`utilisateur « ${utilisateur.nom} » supprimé`);
   }
 
   // -- Initialisation --------------------------------------------------
@@ -564,10 +701,20 @@ const App = (() => {
     });
     els.boutonExporter.addEventListener("click", gererExport);
 
-    if (Storage.supportFileSystemAccess()) {
+    if (Depot.supportFileSystemAccess() && estAdmin()) {
       els.boutonOuvrirFichier.hidden = false;
       els.boutonOuvrirFichier.addEventListener("click", gererOuvertureFichier);
       els.boutonEnregistrerFichier.addEventListener("click", gererEnregistrementFichier);
+    }
+
+    if (estAdmin()) {
+      els.boutonUtilisateurs.hidden = false;
+      els.boutonUtilisateurs.addEventListener("click", ouvrirDialogueUtilisateurs);
+      els.boutonFermerUtilisateurs.addEventListener("click", () => els.dialogueUtilisateurs.close());
+      els.formUtilisateur.addEventListener("submit", soumettreUtilisateur);
+      els.dialogueUtilisateurs.addEventListener("click", (e) => {
+        if (e.target === els.dialogueUtilisateurs) els.dialogueUtilisateurs.close();
+      });
     }
 
     for (const dialogue of [els.dialogueForm, els.dialogueDetail]) {
@@ -577,14 +724,27 @@ const App = (() => {
     }
   }
 
+  /** Cache les actions réservées à l'administrateur pour un compte à accès limité. */
+  function appliquerRestrictionsRole() {
+    if (estAdmin()) return;
+    els.boutonAjouter.hidden = true;
+    els.boutonImporter.hidden = true;
+  }
+
   let initialise = false;
 
-  async function initialiser() {
+  /**
+   * @param {object} donneesPrechargees - données déjà chargées par Auth (évite un double chargement)
+   * @param {{nom: string, role: "admin"|"utilisateur"}} utilisateur - compte qui vient de se connecter
+   */
+  async function initialiser(donneesPrechargees, utilisateur) {
     if (initialise) return; // évite une double init si Auth rappelle après un rechargement
     initialise = true;
+    etat.donnees = donneesPrechargees || (await Depot.chargerAuDemarrage());
+    etat.utilisateurCourant = utilisateur;
     capterElements();
     attacherEvenements();
-    etat.donnees = await Storage.chargerAuDemarrage();
+    appliquerRestrictionsRole();
     rendre();
   }
 

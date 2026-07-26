@@ -20,7 +20,7 @@
  * ---------------------------------------------------------------------
  */
 
-const Storage = (() => {
+const Depot = (() => {
   const CLE_LOCALSTORAGE = "boiteacles.donnees.v2";
   const CHEMIN_JEU_DEFAUT = "./data/keys.default.json";
 
@@ -40,6 +40,8 @@ const Storage = (() => {
   /**
    * Valide grossièrement la forme attendue d'un jeu de données.
    * On reste tolérant : seule la présence d'un tableau "trousseaux" est requise.
+   * Le tableau "utilisateurs" est normalisé (ajouté vide) s'il est absent,
+   * pour rester compatible avec les fichiers exportés avant cette fonctionnalité.
    */
   function estValide(donnees) {
     return (
@@ -47,6 +49,11 @@ const Storage = (() => {
       typeof donnees === "object" &&
       Array.isArray(donnees.trousseaux)
     );
+  }
+
+  function normaliser(donnees) {
+    if (!Array.isArray(donnees.utilisateurs)) donnees.utilisateurs = [];
+    return donnees;
   }
 
   /**
@@ -60,7 +67,7 @@ const Storage = (() => {
     if (local) {
       try {
         const donnees = JSON.parse(local);
-        if (estValide(donnees)) return donnees;
+        if (estValide(donnees)) return normaliser(donnees);
       } catch (erreur) {
         console.warn("Cache local illisible, on retente avec le jeu par défaut.", erreur);
       }
@@ -70,7 +77,7 @@ const Storage = (() => {
       const reponse = await fetch(CHEMIN_JEU_DEFAUT);
       if (reponse.ok) {
         const donnees = await reponse.json();
-        if (estValide(donnees)) return donnees;
+        if (estValide(donnees)) return normaliser(donnees);
       }
     } catch (erreur) {
       // Attendu si l'application est ouverte en file:// sans serveur local :
@@ -78,7 +85,7 @@ const Storage = (() => {
       console.warn("Impossible de charger data/keys.default.json (normal en file://).", erreur);
     }
 
-    return { version: 2, trousseaux: [] };
+    return { version: 2, trousseaux: [], utilisateurs: [] };
   }
 
   /** Sauvegarde silencieuse dans localStorage, appelée après chaque changement. */
@@ -112,7 +119,7 @@ const Storage = (() => {
             reject(new Error("Le fichier ne contient pas de champ « trousseaux » (tableau)."));
             return;
           }
-          resolve(donnees);
+          resolve(normaliser(donnees));
         } catch (erreur) {
           reject(new Error("Le fichier n'est pas un JSON valide."));
         }
@@ -144,7 +151,7 @@ const Storage = (() => {
     }
     handleFichierCourant = handle;
     nomFichierCourant = fichier.name;
-    return { donnees, nomFichier: fichier.name };
+    return { donnees: normaliser(donnees), nomFichier: fichier.name };
   }
 
   /** Écrit directement dans le fichier ouvert via ouvrirFichierLocal(). */
