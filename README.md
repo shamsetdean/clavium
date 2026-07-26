@@ -1,6 +1,6 @@
 # Boîte à clés virtuelle
 
-**© 2026 Shams Guettaf (Dean) — Anthropotech Lab. Tous droits réservés.**
+**© 2026 Shams Guettaf — Anthropotech Lab. Tous droits réservés.**
 Voir [`LICENSE.md`](./LICENSE.md). Ce dépôt est publié pour démonstration et
 usage personnel ; toute réutilisation, modification ou redistribution
 nécessite une autorisation écrite préalable.
