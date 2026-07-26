@@ -7,9 +7,21 @@
       "type": "batiment",
       "crochet": 1,
       "clefs": [
-        { "id": "c-01", "repere": "Porte principale", "code": "BT-01" },
-        { "id": "c-02", "repere": "Local baie", "code": "BT-02" },
-        { "id": "c-03", "repere": "Sas technique", "code": "BT-03" }
+        {
+          "id": "c-01",
+          "repere": "Porte principale",
+          "code": "BT-01"
+        },
+        {
+          "id": "c-02",
+          "repere": "Local baie",
+          "code": "BT-02"
+        },
+        {
+          "id": "c-03",
+          "repere": "Sas technique",
+          "code": "BT-03"
+        }
       ],
       "statut": "disponible",
       "detenteur": null,
@@ -30,7 +42,13 @@
       "nom": "Baie serveur",
       "type": "baie",
       "crochet": 2,
-      "clefs": [{ "id": "c-01", "repere": "Baie serveur", "code": "BAIE-01" }],
+      "clefs": [
+        {
+          "id": "c-01",
+          "repere": "Baie serveur",
+          "code": "BAIE-01"
+        }
+      ],
       "statut": "emprunte",
       "detenteur": "Bertrand",
       "dateEmprunt": "2026-07-20T07:30:00.000Z",
@@ -57,8 +75,16 @@
       "type": "batiment",
       "crochet": 3,
       "clefs": [
-        { "id": "c-01", "repere": "Portail", "code": "MA-01" },
-        { "id": "c-02", "repere": "Accueil", "code": "MA-02" }
+        {
+          "id": "c-01",
+          "repere": "Portail",
+          "code": "MA-01"
+        },
+        {
+          "id": "c-02",
+          "repere": "Accueil",
+          "code": "MA-02"
+        }
       ],
       "statut": "disponible",
       "detenteur": null,
@@ -79,7 +105,13 @@
       "nom": "Baie de brassage - étage 1",
       "type": "baie",
       "crochet": 4,
-      "clefs": [{ "id": "c-01", "repere": "Baie étage 1", "code": "BAIE-02" }],
+      "clefs": [
+        {
+          "id": "c-01",
+          "repere": "Baie étage 1",
+          "code": "BAIE-02"
+        }
+      ],
       "statut": "disponible",
       "detenteur": null,
       "dateEmprunt": null,
@@ -94,5 +126,6 @@
         }
       ]
     }
-  ]
+  ],
+  "utilisateurs": []
 }
