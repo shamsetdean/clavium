@@ -142,6 +142,24 @@ h1, h2, h3, h4 {
   margin: -0.3rem 0 0.9rem;
 }
 
+.info-connexion {
+  color: var(--ok-fg);
+  background: var(--ok-bg);
+  font-size: 0.8rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  margin: -0.2rem 0 0.9rem;
+}
+
+.ajout-utilisateur-info {
+  background: rgba(111, 106, 216, 0.07);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin-top: 0.3rem;
+}
+.ajout-utilisateur-info h3 { font-size: 0.85rem; margin-bottom: 0.4rem; }
+.ajout-utilisateur-info p { font-size: 0.82rem; color: var(--ink-dim); margin: 0; line-height: 1.5; }
+
 /* =======================================================================
    En-tête
    ======================================================================= */
@@ -288,6 +306,15 @@ select {
   box-shadow: 0 0 14px 4px rgba(79, 167, 232, 0.55);
 }
 
+.armoire__entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.2rem;
+}
+
 .armoire__plaque {
   display: inline-block;
   background: var(--verre-vif);
@@ -302,31 +329,42 @@ select {
   border: 1px solid var(--verre-bord);
 }
 
-/* -- Les deux portes de l'armoire -- */
+/* -- Sélecteur de porte : une seule porte affichée à la fois, pour la
+   lisibilité sur PC comme sur téléphone -- */
 
-.armoire__portes {
+.armoire__selecteur-porte {
   display: flex;
-  align-items: stretch;
-  gap: 0;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--verre-bord);
+  border-radius: 999px;
+  padding: 0.25rem;
+  margin-bottom: 1.1rem;
 }
 
-.armoire__charniere {
-  flex: 0 0 auto;
-  width: 18px;
-  margin: 0 -1px;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(120, 130, 160, 0.28) 0px,
-    rgba(120, 130, 160, 0.28) 6px,
-    transparent 6px,
-    transparent 14px
-  );
-  border-left: 1px dashed rgba(120, 130, 160, 0.35);
-  border-right: 1px dashed rgba(120, 130, 160, 0.35);
+.bouton-porte {
+  font-family: var(--police-texte);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-dim);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
 }
+.bouton-porte:hover { background: rgba(255, 255, 255, 0.6); }
+.bouton-porte[aria-selected="true"] {
+  background: var(--marque-degrade);
+  color: #fff;
+  box-shadow: 0 4px 12px var(--marque-ombre);
+}
+.bouton-porte__plage { font-family: var(--police-code); font-size: 0.7rem; opacity: 0.8; margin-left: 0.3rem; }
+
+.armoire__portes { display: block; }
 
 .porte {
-  flex: 1 1 0;
   min-width: 0;
   background-color: rgba(255, 255, 255, 0.35);
   background-image: radial-gradient(circle, rgba(111, 106, 216, 0.14) 1.4px, transparent 1.6px);
@@ -335,11 +373,9 @@ select {
   padding: 1.4rem 0.8rem 1rem;
   box-shadow: inset 0 2px 12px rgba(90, 120, 180, 0.1);
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 1.6rem 0.55rem;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 1.6rem 0.5rem;
 }
-.porte:first-child { border-radius: 18px 4px 4px 18px; }
-.porte:last-child { border-radius: 4px 18px 18px 4px; }
 
 /* -- Un crochet et ce qui y est suspendu -- */
 
@@ -699,31 +735,24 @@ dialog.dialogue::backdrop { background: rgba(60, 80, 150, 0.25); backdrop-filter
   .barre-outils__filtres select, .barre-outils__filtres button { flex: 1 1 100%; }
 
   .armoire { padding: 1rem; border-radius: 20px; }
-  .armoire__portes { flex-direction: column; gap: 0.9rem; }
-  .armoire__charniere {
-    width: auto;
-    height: 14px;
-    margin: -1px 0;
-    background: repeating-linear-gradient(
-      to right,
-      rgba(120, 130, 160, 0.28) 0px,
-      rgba(120, 130, 160, 0.28) 6px,
-      transparent 6px,
-      transparent 14px
-    );
-    border-left: none;
-    border-right: none;
-    border-top: 1px dashed rgba(120, 130, 160, 0.35);
-    border-bottom: 1px dashed rgba(120, 130, 160, 0.35);
+  .armoire__entete { flex-direction: column; align-items: stretch; gap: 0.7rem; }
+  .armoire__selecteur-porte { width: 100%; }
+  .bouton-porte { flex: 1; text-align: center; }
+
+  .porte {
+    grid-template-columns: repeat(10, minmax(30px, 1fr));
+    gap: 1.1rem 0.25rem;
+    padding: 1rem 0.35rem 0.7rem;
+    overflow-x: auto; /* filet de sécurité si l'écran est plus étroit que 10 crochets lisibles */
   }
-  .porte:first-child, .porte:last-child { border-radius: 14px; }
-  .porte { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1.3rem 0.3rem; padding: 1.1rem 0.4rem 0.8rem; }
-  .creneau { min-height: 118px; }
-  .etiquette__nom { font-size: 0.6rem; -webkit-line-clamp: 2; }
-  .etiquette__cles { font-size: 0.54rem; }
-  .creneau__numero { font-size: 0.52rem; }
-  .creneau__action { font-size: 0.56rem; padding: 0.3rem 0.15rem; }
-  .icone-cle { width: 11px; height: 11px; }
+  .creneau { min-height: 112px; }
+  .etiquette { padding: 0.35rem 0.2rem 0.3rem; border-radius: 9px; }
+  .etiquette__nom { font-size: 0.56rem; -webkit-line-clamp: 2; margin-bottom: 0.05rem; }
+  .etiquette__cles { font-size: 0.5rem; }
+  .creneau__numero { font-size: 0.5rem; }
+  .creneau__action { font-size: 0.52rem; padding: 0.28rem 0.1rem; margin-top: 0.3rem; }
+  .icone-cle { width: 10px; height: 10px; }
+  .anneau { width: 9px; height: 9px; border-width: 2px; }
 
   .champ--ligne { flex-direction: column; gap: 0.85rem; }
   .champ--crochet { max-width: none; }
