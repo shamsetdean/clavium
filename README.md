@@ -15,22 +15,20 @@ nécessite une autorisation écrite préalable.
 >   force-push) après coup.
 > - Pour une preuve plus solide, un dépôt auprès de l'APP (Agence pour la
 >   Protection des Programmes) ou un constat d'huissier/notaire est
->   recommandé — l'ancienne enveloppe Soleau numérique de l'INPI a été
->   fermée en 2021.
-> - Si le code lui-même (et pas seulement le site déployé) doit rester
->   invisible, il faut un **dépôt privé** : GitHub Pages peut être publié
->   depuis un dépôt privé selon le type de compte (le site reste public,
->   le code source non). Avec un dépôt public classique, le code est
->   consultable par n'importe qui — la licence ci-dessus n'empêche pas la
->   lecture, mais interdit juridiquement la copie et fournit une base pour
->   agir en cas d'usage non autorisé.
+>   recommandé.
+> - Le code du front-end (HTML/CSS/JS) reste consultable sur un dépôt
+>   GitHub Pages public — la licence l'interdit juridiquement mais n'en
+>   empêche pas la lecture. Les **données** (armoire, comptes), elles, ne
+>   sont plus dans ce dépôt du tout : elles vivent sur Supabase, protégées
+>   par de vraies règles d'accès côté serveur (voir plus bas).
 
 ## Ce que fait l'application
 
-Application statique reproduisant une armoire à clés murale : les trousseaux
-sont suspendus à des crochets numérotés, chacun avec sa propre étiquette QR
-code à imprimer. Accès protégé par mot de passe. Aucun serveur, aucune base
-de données distante, aucun tracker.
+Interface web reproduisant une armoire à clés murale : les trousseaux sont
+suspendus à des crochets numérotés, chacun avec sa propre étiquette QR code
+à imprimer. L'interface (HTML/CSS/JS) reste statique et se déploie sur
+GitHub Pages ; les données (trousseaux, comptes) et l'authentification
+vivent sur **Supabase**, pour une sécurité réelle côté serveur.
 
 ## Deux types de trousseaux
 
@@ -39,227 +37,228 @@ de données distante, aucun tracker.
   trouve la baie. Dégradé **or/ambre**.
 - **Clé de baie** — une seule clé, qui n'ouvre que la baie. Dégradé **vert**.
 
-Ces deux couleurs sont strictement réservées à cet usage : elles n'apparaissent
-nulle part ailleurs dans l'interface (boutons, focus, etc. utilisent une
-troisième couleur de marque neutre, indigo/bleu, définie séparément dans
-`css/styles.css` sous `--marque-*`).
-
-Chaque trousseau a un numéro de crochet, un statut (suspendu / décroché),
-et génère un QR code identifiant à imprimer sur le porte-clés physique.
+Ces deux couleurs sont réservées à cet usage ; le reste de l'interface
+(boutons, focus…) utilise une couleur de marque neutre indigo/bleu
+(`--marque-*` dans `css/styles.css`).
 
 ## Disposition physique de l'armoire
 
-L'armoire a une capacité fixe de **49 crochets numérotés**, répartis sur deux
-portes de 7 crochets par ligne :
+Capacité fixe de **70 crochets numérotés**, répartis sur deux portes de
+10 crochets par ligne :
 
-- Porte gauche : 4 rangées → crochets n°1 à 28
-- Porte droite : 3 rangées → crochets n°29 à 49
+- Porte A : 4 rangées → crochets n°1 à 40
+- Porte B : 3 rangées → crochets n°41 à 70
 
-Les 49 crochets s'affichent toujours, qu'ils soient occupés ou non — un
-crochet libre apparaît nu (juste le crochet et son numéro) et peut être
-cliqué directement pour y accrocher un nouveau trousseau (le formulaire
-s'ouvre avec ce numéro de crochet déjà rempli). Deux trousseaux ne peuvent
-pas partager le même crochet : le formulaire refuse l'enregistrement si le
-numéro choisi est déjà occupé par un autre trousseau. Le numéro de crochet
-est donc obligatoire, entre 1 et 49 (`js/app.js`, constantes
-`COLONNES_PAR_LIGNE`, `LIGNES_PORTE_A`, `LIGNES_PORTE_B`).
+**Une seule porte est affichée à la fois** (onglets *Porte A* / *Porte B*) —
+plus lisible sur PC comme sur téléphone. Un crochet libre est cliquable
+(admin) pour y accrocher directement un nouveau trousseau. Deux trousseaux
+ne peuvent pas partager le même crochet — contrainte appliquée à la fois
+côté interface et côté base de données (`crochet` est `unique` dans le
+schéma SQL : même en cas de double-clic ou de requête directe, la base
+refuse le doublon).
+
+## QR code : lien direct vers l'action
+
+Le QR code de chaque trousseau encode un **lien complet** vers le site
+(`?trousseau=<id>`). En le scannant sur le porte-clés physique, on arrive
+directement sur ce trousseau, prêt à emprunter ou restituer en un geste —
+la connexion reste nécessaire, le lien ne contient aucun mot de passe.
+
+## Comptes : Shams (admin) et Lucile (accès limité)
+
+Deux rôles :
+
+- **Administrateur** — accès complet : ajouter/modifier/retirer un
+  trousseau, gérer les comptes.
+- **Accès limité** — consulter l'armoire, emprunter, restituer. Rien
+  d'autre : les actions d'administration sont invisibles pour ce rôle
+  dans l'interface, **et refusées côté base de données** si jamais elles
+  étaient tentées quand même (voir la section Sécurité ci-dessous).
+
+Le tout premier compte créé (à la première ouverture du site) devient
+automatiquement administrateur — ce sera Shams. Pour ajouter Lucile en
+accès limité, voir *Mise en route avec Supabase → Ajouter un utilisateur*
+plus bas : ça se fait depuis le tableau de bord Supabase, pas depuis un
+bouton dans l'app, pour que son mot de passe ne soit jamais vu par
+personne d'autre qu'elle.
 
 ## Architecture
 
 ```
 boite-a-cles/
-├── index.html              → écran de connexion + structure de l'armoire
+├── index.html                    → écran de connexion + structure de l'armoire
 ├── css/
-│   └── styles.css          → design (tokens couleur/typo, composants)
+│   └── styles.css                → design (tokens couleur/typo, composants)
 ├── js/
-│   ├── auth.js               → verrou d'accès par mot de passe (SHA-256)
-│   ├── storage.js            → seule couche autorisée à lire/écrire des données
-│   ├── app.js                 → état, rendu de l'armoire, formulaire, QR
+│   ├── supabase-config.js          → URL + clé publique de VOTRE projet Supabase
+│   ├── supabase-client.js          → initialise le client à partir de la config
+│   ├── auth.js                     → connexion/inscription via Supabase Auth
+│   ├── data.js                     → toutes les requêtes vers les données
+│   ├── app.js                      → état, rendu de l'armoire, formulaire, QR
 │   └── vendor/
-│       ├── qrcode.js           → générateur de QR code (MIT, Kazuhiko Arase)
-│       └── qrcode-utf8.js      → extension UTF-8 de la même librairie
-├── data/
-│   └── keys.default.json     → jeu de données chargé au tout premier lancement
-├── assets/
-│   ├── favicon-16.png, favicon-32.png, favicon-48.png, favicon.png
-│   ├── icone-180.png, icone-512.png
-│   └── og-image.png
+│       ├── supabase.js               → client Supabase (MIT, vendé localement)
+│       ├── qrcode.js                 → générateur de QR code (MIT)
+│       └── qrcode-utf8.js            → extension UTF-8 de la même librairie
+├── supabase/
+│   └── schema.sql                  → tables, sécurité (RLS), fonctions — à exécuter une fois
+├── assets/                        → favicon, icône, image de partage
 └── README.md
 ```
 
-Ces deux fichiers `vendor/` sont une copie locale figée de la librairie
-`qrcode-generator` (licence MIT) : le QR code est généré entièrement dans le
-navigateur, sans appel réseau ni service tiers.
+Les fichiers `vendor/` sont des copies locales figées de librairies MIT
+(Supabase JS, générateur de QR code) : elles s'exécutent entièrement dans
+le navigateur, sans CDN ni dépendance au moment du chargement de la page.
 
-La séparation est stricte : `index.html` ne connaît que la structure,
-`styles.css` ne connaît que l'apparence, `app.js` ne connaît que la logique
-métier, et `storage.js` est le seul fichier à toucher `localStorage`, `fetch`
-ou l'API fichiers. Pour ajouter une fonctionnalité qui touche aux données
-(ex. un champ supplémentaire sur une clé), il suffit de modifier la forme des
-objets dans `data/keys.default.json` et le formulaire correspondant — le reste
-de l'application n'a pas à changer.
+## Mise en route avec Supabase
 
-## Écran de connexion — comptes, rôles et ce qu'ils protègent vraiment
+**Je ne peux pas faire ces étapes à votre place** (pas d'accès réseau vers
+Supabase depuis mon environnement) — mais elles ne prennent que quelques
+minutes.
 
-Il n'y a plus de mot de passe unique codé dans l'application. À la toute
-première ouverture (aucun compte enregistré), l'écran propose de **créer le
-compte administrateur** : nom + mot de passe, choisis sur place. Le mot de
-passe est haché en SHA-256 (Web Crypto API du navigateur) et le résultat est
-stocké dans les données elles-mêmes (`donnees.utilisateurs`) — jamais en
-clair, ni dans un fichier livré, ni dans ce README. Ensuite, l'écran devient
-un formulaire de connexion classique (nom + mot de passe).
+### 1. Créer le projet
 
-Deux rôles :
+Sur [supabase.com](https://supabase.com), créez un compte puis un nouveau
+projet (le plan gratuit suffit largement pour deux comptes et quelques
+dizaines de trousseaux).
 
-- **Administrateur** — accès complet : ajouter/modifier/retirer un
-  trousseau, importer un JSON, ouvrir/enregistrer un fichier local, créer et
-  supprimer des comptes (bouton *Utilisateurs* dans l'en-tête).
-- **Accès limité** — peut consulter l'armoire (recherche, filtres, détail,
-  QR code, historique), emprunter et restituer un trousseau. Rien d'autre :
-  les boutons Ajouter, Importer, Ouvrir/Enregistrer un fichier, Utilisateurs
-  et Modifier/Retirer sont invisibles pour ce rôle.
+### 2. Exécuter le schéma
 
-Comme pour toute application 100 % statique : ce système distingue les rôles
-dans l'interface et évite un accès accidentel, mais **ce n'est pas une
-sécurité forte** face à quelqu'un de déterminé qui lirait le code source
-(public sur GitHub Pages). Les restrictions de rôle sont appliquées côté
-interface, pas comme une barrière serveur infranchissable.
+Dashboard → **SQL Editor** → *New query* → collez tout le contenu de
+[`supabase/schema.sql`](./supabase/schema.sql) → *Run*. Ça crée les tables,
+active la sécurité (RLS), et met en place les fonctions d'emprunt/retour.
+Vérifiez ensuite dans **Table Editor** que `trousseaux` et `profils`
+apparaissent bien dans la liste avant de passer à la suite.
 
-### Notification par email à chaque modification
+L'armoire démarre vide : les trousseaux se recréent directement depuis
+l'application (bouton *+ Ajouter un trousseau*), pas par migration.
 
-À chaque ajout, modification, emprunt, restitution ou changement dans la
-liste des utilisateurs, l'application :
-1. télécharge automatiquement une copie horodatée du JSON à jour ;
-2. ouvre un brouillon email pré-rempli vers `shamsetdean@gmail.com`.
+### 3. Récupérer l'URL et la clé, les mettre dans le projet
 
-**Limite technique assumée, pas un manque de soin** : un navigateur ne peut
-ni joindre un fichier à un email automatiquement, ni l'envoyer sans action
-humaine — ce sont des restrictions de sécurité du web, pas un choix de ce
-projet. Il reste donc un geste manuel : joindre le fichier qui vient d'être
-téléchargé, puis cliquer sur Envoyer dans le client email. Aucun service
-tiers n'est utilisé pour cet envoi (cohérent avec l'absence de serveur et la
-protection des données) ; la contrepartie est cette étape manuelle.
+Dashboard → **Settings → API** → copiez *Project URL* et la clé *anon
+public*. Collez-les dans `js/supabase-config.js` :
 
-Si un envoi vraiment automatique et silencieux est souhaité malgré tout, il
-faudrait passer par un service tiers (ex. EmailJS, Resend) avec une clé
-d'API exposée côté client et le contenu de l'armoire transitant par ses
-serveurs — un compromis à valider explicitement avant de l'implémenter.
+```js
+const SUPABASE_URL = "https://votre-projet.supabase.co";
+const SUPABASE_ANON_KEY = "votre-clé-anon-publique";
+```
 
-## Où vivent les données
+Cette clé est publique par conception (voir les commentaires du fichier) —
+ce n'est pas un secret à cacher, la sécurité vient des règles RLS définies
+à l'étape 2, pas de la confidentialité de cette clé.
 
-Le navigateur ne peut pas écrire silencieusement sur le disque : trois modes
-de stockage sont donc combinés.
+### 4. Désactiver les inscriptions publiques (recommandé)
 
-1. **Cache automatique** — chaque modification est sauvegardée dans
-   `localStorage`. Les données survivent à une fermeture d'onglet, mais
-   restent propres à ce navigateur/cet appareil.
-2. **Export / Import JSON** — les boutons *Exporter en JSON* et *Importer un
-   JSON* permettent de télécharger l'état courant ou de recharger un fichier
-   `.json` (sauvegarde, partage, transfert d'un appareil à l'autre).
-3. **Édition directe d'un fichier local** (Chrome, Edge, et autres navigateurs
-   compatibles avec la *File System Access API*) — le bouton *Ouvrir un
-   fichier local* permet de choisir un `.json` sur le disque ; le bouton
-   *Enregistrer* réécrit alors ce même fichier. Sur les navigateurs qui ne
-   supportent pas cette API (Firefox, Safari), ces deux boutons restent
-   cachés et seuls l'export/import restent disponibles — l'application reste
-   entièrement fonctionnelle.
+Dashboard → **Authentication → Providers → Email** → désactivez *Allow new
+users to sign up*, une fois le compte de Shams créé (étape suivante). Ça
+évite que n'importe qui connaissant l'URL du site puisse créer un compte —
+même si, par défaut, un compte sans profil associé ne peut rien faire dans
+l'application (filet de sécurité intégré au schéma SQL).
 
-Au premier lancement, si `localStorage` est vide, l'application charge
-`data/keys.default.json` à titre d'exemple. Une fois modifiées, les données
-ne repartent plus de ce fichier : il sert uniquement d'amorce.
+Dashboard → **Authentication → Providers → Email** → vous pouvez aussi
+désactiver *Confirm email* pour simplifier, ou le laisser actif pour une
+vérification supplémentaire (dans ce cas, Shams et Lucile devront cliquer
+le lien reçu par email avant de pouvoir se connecter).
 
-## Étiquettes QR code
+### 5. Ouvrir le site, créer le compte de Shams
 
-Dans le détail d'un trousseau, le bouton *Imprimer l'étiquette* ouvre la
-boîte de dialogue d'impression du navigateur sur une mise en page dédiée
-(6 cm de large environ) : nom du trousseau, numéro de crochet, codes des
-clés et QR code, prête à découper et à fixer sur le porte-clés physique.
-Le QR code encode un identifiant du trousseau (nom, type, codes) — pas
-d'information sensible.
+Premier chargement de la page (une fois `supabase-config.js` renseigné) :
+l'écran propose de créer le compte administrateur. Shams entre son nom,
+son email, un mot de passe — c'est tout, il devient automatiquement admin.
+
+### 6. Ajouter Lucile
+
+Dashboard → **Authentication → Users → Add user** (ou *Invite*, pour qu'elle
+choisisse elle-même son mot de passe par email — recommandé). Une fois son
+compte créé, notez son UUID affiché dans la liste, puis dans **SQL
+Editor** :
+
+```sql
+insert into profils (id, nom, role)
+values ('UUID-DE-LUCILE-ICI', 'Lucile', 'utilisateur');
+```
+
+Elle peut alors se connecter et emprunter/restituer, sans jamais avoir
+accès aux boutons d'administration.
+
+## Sécurité : ce qui a vraiment changé par rapport à la version statique
+
+- **Mots de passe** : vérifiés côté serveur par Supabase Auth (hachage
+  bcrypt), jamais dans le code envoyé au navigateur. Avant, une empreinte
+  SHA-256 comparée côté client — techniquement contournable par quelqu'un
+  lisant le JavaScript.
+- **Droits d'accès** : appliqués par des règles RLS (Row Level Security)
+  côté base de données (`supabase/schema.sql`). Un compte "accès limité"
+  ne peut PAS modifier un trousseau même en contournant l'interface (en
+  appelant l'API directement) — la base de données refuse la requête.
+  Avant, seule l'interface cachait les boutons ; rien n'empêchait
+  techniquement une modification directe du `localStorage`.
+- **Synchronisation** : les données vivent sur un serveur central, pas
+  dans le stockage local de chaque navigateur — ça résout le problème
+  vécu avec Safari et Firefox qui ne partageaient pas leurs données.
+- **Sauvegarde** : Supabase effectue ses propres sauvegardes automatiques
+  selon votre plan (vérifiez la politique de rétention associée à votre
+  offre). Le bouton *Exporter en JSON* reste disponible pour une sauvegarde
+  manuelle ponctuelle.
+
+## Ce qui a été retiré avec cette architecture
+
+L'ancienne version stockait tout dans `localStorage` du navigateur avec
+import/export JSON et édition de fichier local (File System Access API).
+Ces mécanismes n'ont plus de sens avec une base de données centrale et ont
+été retirés : plus de bouton *Importer un JSON*, *Ouvrir un fichier local*
+ni *Enregistrer*. Seul *Exporter en JSON* reste, comme sauvegarde manuelle
+ponctuelle. La notification par email à chaque modification a également
+été retirée : elle compensait la fragilité du stockage local, qui n'existe
+plus — Supabase est maintenant la source de vérité durable.
 
 ## Favicon, icône et image de partage
 
 Le dossier `assets/` contient le favicon (plusieurs tailles), l'icône
-d'application (`apple-touch-icon`, écran d'accueil) et l'image utilisée pour
-l'aperçu Open Graph (partage du lien). Toutes sont référencées dans le
-`<head>` de `index.html`.
+d'application (`apple-touch-icon`) et l'image Open Graph, toutes référencées
+dans le `<head>` de `index.html`.
 
 Une fois le site déployé, remplacez la valeur relative de `og:image` par
-l'URL absolue de la page (ex. `https://votre-compte.github.io/boite-a-cles/assets/og-image.png`)
-— certains réseaux sociaux n'affichent pas correctement une image en chemin
-relatif.
+l'URL absolue de la page (ex. `https://votre-compte.github.io/boite-a-cles/assets/og-image.png`).
 
 ## Déploiement sur GitHub Pages
 
-1. Poussez ce dossier à la racine d'un dépôt GitHub (ou dans un dossier
-   `/docs`).
-2. Dans les paramètres du dépôt → *Pages*, choisissez la branche et le
+1. Poussez ce dossier à la racine d'un dépôt GitHub (ou dans `/docs`).
+2. Complétez d'abord `js/supabase-config.js` (voir *Mise en route* ci-dessus)
+   — sans ça, le site s'affiche mais ne pourra pas se connecter.
+3. Dans les paramètres du dépôt → *Pages*, choisissez la branche et le
    dossier contenant `index.html`.
-3. C'est tout : aucune étape de build, aucune dépendance à installer.
-
-## Utilisation en local
-
-Le chargement de `data/keys.default.json` se fait via `fetch()`, qui est
-bloqué par certains navigateurs quand la page est ouverte directement en
-`file://`. Pour tester en local, servez le dossier avec un petit serveur
-statique, par exemple :
-
-```bash
-python3 -m http.server 8000
-# puis ouvrir http://localhost:8000
-```
-
-Sans serveur local, l'application démarre simplement avec une boîte à clés
-vide (ou avec le contenu déjà en cache) — aucune erreur bloquante.
+4. Aucune étape de build, aucune dépendance à installer côté GitHub Pages
+   — seul le projet Supabase doit être configuré au préalable.
 
 ## Étendre le modèle de données
 
-Chaque trousseau suit cette forme (voir `data/keys.default.json`) :
+Le schéma complet (tables, contraintes, sécurité) est dans
+[`supabase/schema.sql`](./supabase/schema.sql), qui fait foi. Pour
+mémoire, un trousseau (table `trousseaux`) :
 
-```json
-{
-  "id": "t-0001",
-  "nom": "Bâtiment technique",
-  "type": "batiment",
-  "crochet": 1,
-  "clefs": [
-    { "id": "c-01", "repere": "Porte principale", "code": "BT-01" },
-    { "id": "c-02", "repere": "Local baie", "code": "BT-02" }
-  ],
-  "statut": "disponible",
-  "detenteur": null,
-  "dateEmprunt": null,
-  "dateRetourPrevue": null,
-  "notes": "",
-  "historique": [
-    { "action": "creation", "personne": "Système", "date": "2026-06-01T09:00:00.000Z", "commentaire": "" }
-  ]
-}
-```
+| Colonne | Type | Remarque |
+|---|---|---|
+| `id` | uuid | généré automatiquement |
+| `nom` | text | |
+| `type` | text | `batiment` ou `baie` |
+| `crochet` | integer | 1 à 70, unique |
+| `clefs` | jsonb | `[{ "id", "repere", "code" }, …]` |
+| `statut` | text | `disponible` ou `emprunte` |
+| `detenteur`, `date_emprunt`, `date_retour_prevue` | | remplis par les fonctions d'emprunt/retour |
+| `notes` | text | |
+| `historique` | jsonb | journal des actions |
 
-`statut` vaut `"disponible"` (suspendu sur son crochet) ou `"emprunte"`
-(décroché). `type` vaut `"batiment"` (plusieurs `clefs`) ou `"baie"` (une
-seule entrée dans `clefs`) — ce sont les deux seuls types prévus par le
-formulaire (`index.html` / `js/app.js`, constante `LIBELLES_TYPE`).
+Et un compte (table `profils`, rattachée à `auth.users`) :
 
-Les comptes suivent cette forme (champ `utilisateurs`, géré par l'écran de
-connexion et la boîte de dialogue *Utilisateurs*, jamais à éditer à la main) :
-
-```json
-{
-  "id": "u-0001",
-  "nom": "Shams",
-  "role": "admin",
-  "empreinte": "<hash SHA-256, 64 caractères hexadécimaux>"
-}
-```
-
-`role` vaut `"admin"` ou `"utilisateur"` (accès limité). `empreinte` n'est
-jamais le mot de passe en clair — voir la section *Écran de connexion*
-ci-dessus.
+| Colonne | Type | Remarque |
+|---|---|---|
+| `id` | uuid | = l'id du compte Supabase Auth |
+| `nom` | text | |
+| `role` | text | `admin` ou `utilisateur` |
 
 ## Compatibilité
 
 Testé sur les navigateurs modernes (Chrome, Edge, Firefox, Safari récents).
-Les boîtes de dialogue utilisent l'élément natif `<dialog>`. L'édition
-directe de fichier local nécessite un navigateur basé sur Chromium.
+Les boîtes de dialogue utilisent l'élément natif `<dialog>`. Nécessite une
+connexion réseau vers votre projet Supabase (contrairement à la version
+purement statique, qui fonctionnait hors ligne une fois chargée).
