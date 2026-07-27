@@ -1,0 +1,774 @@
+/* -------------------------------------------------------------------
+   © 2026 Shams Guettaf — Anthropotech Lab. Tous droits réservés.
+   Voir LICENSE.md — reproduction et réutilisation interdites sans
+   autorisation écrite préalable.
+   ------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------
+   styles.css — Boîte à clés virtuelle
+   Direction : coffre translucide façon "verre dépoli", dégradés doux
+   indigo→bleu (trousseaux bâtiment) et sarcelle→menthe (clés de baie),
+   halos lumineux en fond — inspiré de l'illustration og-image.
+   ------------------------------------------------------------------- */
+
+:root {
+  /* Fond / verre */
+  --bg-haut: #eaf5fb;
+  --bg-bas: #ffffff;
+  --verre: rgba(255, 255, 255, 0.6);
+  --verre-vif: rgba(255, 255, 255, 0.82);
+  --verre-bord: rgba(255, 255, 255, 0.75);
+  --ink: #1f2a44;
+  --ink-dim: #66718a;
+  --ligne: rgba(31, 42, 68, 0.12);
+
+  /* Couleur de marque neutre — boutons génériques, focus, halos. Ne sert
+     jamais à indiquer un type de trousseau (voir --accent-*/--baie-* ci-dessous). */
+  --marque-a: #6f6ad8;
+  --marque-b: #4fa7e8;
+  --marque-degrade: linear-gradient(135deg, var(--marque-a), var(--marque-b));
+  --marque-ombre: rgba(90, 120, 210, 0.28);
+
+  /* Dégradé des TROUSSEAUX COMPLETS (bâtiment, plusieurs clés) — or / ambre */
+  --accent-a: #e0a512;
+  --accent-b: #ffd873;
+  --accent-degrade: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  --accent-ombre: rgba(196, 148, 20, 0.3);
+
+  /* Dégradé de la BAIE UNIQUEMENT (une seule clé) — vert */
+  --baie-a: #1f9e5c;
+  --baie-b: #7be08a;
+  --baie-degrade: linear-gradient(135deg, var(--baie-a), var(--baie-b));
+  --baie-ombre: rgba(31, 158, 92, 0.28);
+
+  --ok-bg: #e2f5ea;
+  --ok-fg: #2f9e6b;
+  --out-bg: #fdecec;
+  --out-fg: #d95c53;
+
+  /* Typographie : uniquement des polices système, aucune requête externe */
+  --police-affichage: Georgia, "Iowan Old Style", "Palatino Linotype", ui-serif, serif;
+  --police-texte: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --police-code: "SF Mono", "IBM Plex Mono", ui-monospace, "Courier New", monospace;
+
+  --rayon: 18px;
+  --flou-verre: blur(16px);
+}
+
+* { box-sizing: border-box; }
+
+/* Garantit que l'attribut HTML "hidden" masque toujours l'élément, même si
+   une règle CSS plus loin dans le fichier lui donne un display explicite
+   (ex. .ecran-connexion { display: flex }) à spécificité égale. Sans ce
+   correctif, l'écran de connexion et l'armoire pouvaient s'afficher tous
+   les deux en même temps, l'un sous l'autre. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, var(--bg-haut) 0%, #f4fafd 55%, var(--bg-bas) 100%);
+  color: var(--ink);
+  font-family: var(--police-texte);
+  line-height: 1.45;
+}
+
+/* Halos de couleur en fond, façon illustration — fixes, discrets, jamais au premier plan */
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  z-index: 0;
+  pointer-events: none;
+}
+body::before { width: 440px; height: 440px; background: #a9cdf2; top: -140px; left: -120px; }
+body::after { width: 400px; height: 400px; background: #cdbdf5; bottom: -160px; right: -100px; }
+
+h1, h2, h3, h4 {
+  font-family: var(--police-affichage);
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Dégradés SVG partagés (définis dans index.html), utilisés via url(#…) */
+.icone-degrade-batiment { color: var(--accent-a); }
+.icone-degrade-baie { color: var(--baie-a); }
+
+/* =======================================================================
+   Écran de connexion
+   ======================================================================= */
+
+.ecran-connexion {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.ecran-connexion__panneau {
+  background: var(--verre-vif);
+  backdrop-filter: var(--flou-verre);
+  -webkit-backdrop-filter: var(--flou-verre);
+  border: 1px solid var(--verre-bord);
+  border-radius: 26px;
+  padding: 2.3rem 2rem;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 30px 70px rgba(70, 90, 160, 0.22);
+}
+
+.ecran-connexion__icone { width: 46px; height: 46px; margin-bottom: 0.5rem; }
+
+.ecran-connexion__texte {
+  color: var(--ink-dim);
+  font-size: 0.85rem;
+  margin: 0.3rem 0 1.4rem;
+}
+
+.champ--connexion { text-align: left; margin-bottom: 0.8rem; }
+
+.erreur-connexion {
+  color: var(--out-fg);
+  font-size: 0.8rem;
+  margin: -0.3rem 0 0.9rem;
+}
+
+.info-connexion {
+  color: var(--ok-fg);
+  background: var(--ok-bg);
+  font-size: 0.8rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  margin: -0.2rem 0 0.9rem;
+}
+
+.ajout-utilisateur-info {
+  background: rgba(111, 106, 216, 0.07);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin-top: 0.3rem;
+}
+.ajout-utilisateur-info h3 { font-size: 0.85rem; margin-bottom: 0.4rem; }
+.ajout-utilisateur-info p { font-size: 0.82rem; color: var(--ink-dim); margin: 0; line-height: 1.5; }
+
+/* =======================================================================
+   En-tête
+   ======================================================================= */
+
+.entete {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.1rem 1.75rem;
+  background: var(--verre);
+  backdrop-filter: var(--flou-verre);
+  -webkit-backdrop-filter: var(--flou-verre);
+  color: var(--ink);
+  border-bottom: 1px solid var(--verre-bord);
+  box-shadow: 0 4px 24px rgba(80, 110, 170, 0.08);
+}
+
+.entete__identite { display: flex; align-items: center; gap: 0.75rem; }
+.entete__icone { width: 30px; height: 30px; flex-shrink: 0; }
+.entete h1 { font-size: 1.35rem; letter-spacing: 0.01em; }
+.entete__sous-titre { margin: 0.1rem 0 0; font-size: 0.8rem; color: var(--ink-dim); }
+.entete__fichier { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.etiquette-fichier { font-size: 0.78rem; color: var(--ink-dim); font-family: var(--police-code); }
+
+/* =======================================================================
+   Boutons
+   ======================================================================= */
+
+.bouton {
+  font-family: var(--police-texte);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+}
+.bouton:active { transform: scale(0.97); }
+.bouton:focus-visible { outline: 2px solid var(--marque-a); outline-offset: 2px; }
+
+.bouton--brass {
+  background-color: #6f6ad8; /* filet de secours si le dégradé ne se charge pas */
+  background: var(--marque-degrade, linear-gradient(135deg, #6f6ad8, #4fa7e8));
+  color: #fff;
+  box-shadow: 0 8px 20px var(--marque-ombre, rgba(90, 120, 210, 0.28));
+}
+.bouton--brass:hover { filter: brightness(1.06); }
+
+.bouton--discret { background: transparent; border-color: var(--ligne); color: inherit; }
+.entete .bouton--discret:hover { background: rgba(111, 106, 216, 0.08); }
+
+.dialogue .bouton--discret,
+.detail__actions .bouton--discret {
+  border-color: var(--ligne);
+  color: var(--ink);
+}
+.dialogue .bouton--discret:hover,
+.detail__actions .bouton--discret:hover { background: rgba(111, 106, 216, 0.06); }
+
+.bouton--danger { background: transparent; border-color: var(--out-fg); color: var(--out-fg); }
+.bouton--danger:hover { background: var(--out-bg); }
+
+.bouton--pleine-largeur { width: 100%; }
+.bouton--petit { padding: 0.35rem 0.7rem; font-size: 0.78rem; }
+
+/* =======================================================================
+   Conteneur / barre d'outils
+   ======================================================================= */
+
+.conteneur { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 1.75rem; }
+
+.barre-outils {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.barre-outils__recherche { position: relative; flex: 1 1 260px; }
+.icone-recherche { position: absolute; left: 0.7rem; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--ink-dim); }
+#champ-recherche {
+  width: 100%;
+  padding: 0.55rem 0.8rem 0.55rem 2.3rem;
+  border-radius: 999px;
+  border: 1px solid var(--ligne);
+  background: var(--verre-vif);
+  font-size: 16px;
+}
+#champ-recherche:focus-visible { outline: 2px solid var(--marque-a); }
+
+.barre-outils__filtres { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+select {
+  border: 1px solid var(--ligne);
+  background: var(--verre-vif);
+  border-radius: 999px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.85rem;
+  color: var(--ink);
+}
+
+.compteur { font-size: 0.8rem; color: var(--ink-dim); margin: 0 0 1rem 0.2rem; }
+
+/* =======================================================================
+   Le coffre à clés (verre dépoli)
+   ======================================================================= */
+
+.armoire {
+  position: relative;
+  background: var(--verre);
+  backdrop-filter: var(--flou-verre);
+  -webkit-backdrop-filter: var(--flou-verre);
+  border-radius: 28px;
+  padding: 1.6rem;
+  border: 1px solid var(--verre-bord);
+  box-shadow:
+    0 24px 60px rgba(80, 110, 180, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* Petit nœud lumineux, écho discret des halos de l'illustration */
+.armoire::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--marque-b);
+  box-shadow: 0 0 14px 4px rgba(79, 167, 232, 0.55);
+}
+
+.armoire__entete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.2rem;
+}
+
+.armoire__plaque {
+  display: inline-block;
+  background: var(--verre-vif);
+  color: var(--ink-dim);
+  font-family: var(--police-code);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  margin: 0.1rem 0 1.1rem;
+  border: 1px solid var(--verre-bord);
+}
+
+/* -- Sélecteur de porte : une seule porte affichée à la fois, pour la
+   lisibilité sur PC comme sur téléphone -- */
+
+.armoire__selecteur-porte {
+  display: flex;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--verre-bord);
+  border-radius: 999px;
+  padding: 0.25rem;
+  margin-bottom: 1.1rem;
+}
+
+.bouton-porte {
+  font-family: var(--police-texte);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-dim);
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.bouton-porte:hover { background: rgba(255, 255, 255, 0.6); }
+.bouton-porte[aria-selected="true"] {
+  background-color: #6f6ad8;
+  background: var(--marque-degrade, linear-gradient(135deg, #6f6ad8, #4fa7e8));
+  color: #fff;
+  box-shadow: 0 4px 12px var(--marque-ombre, rgba(90, 120, 210, 0.28));
+}
+.bouton-porte__plage { font-family: var(--police-code); font-size: 0.7rem; opacity: 0.8; margin-left: 0.3rem; }
+
+.armoire__portes { display: block; }
+
+.porte {
+  min-width: 0;
+  background-color: rgba(255, 255, 255, 0.35);
+  background-image: radial-gradient(circle, rgba(111, 106, 216, 0.14) 1.4px, transparent 1.6px);
+  background-size: 22px 22px;
+  border-radius: 18px;
+  padding: 1.4rem 0.8rem 1rem;
+  box-shadow: inset 0 2px 12px rgba(90, 120, 180, 0.1);
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 1.6rem 0.5rem;
+}
+
+/* -- Un crochet et ce qui y est suspendu -- */
+
+.creneau {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  min-height: 148px;
+  cursor: pointer;
+}
+.creneau:focus-visible { outline: 2px solid var(--marque-a); outline-offset: 4px; border-radius: 8px; }
+
+/* Crochet libre : juste le crochet et son numéro, cliquable pour y accrocher un trousseau */
+.creneau--vide { cursor: copy; opacity: 0.55; transition: opacity 0.12s ease; }
+.creneau--vide:hover { opacity: 1; }
+.creneau--vide .creneau__support::after {
+  content: "+";
+  position: absolute;
+  top: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: var(--marque-a);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.creneau--vide:hover .creneau__support::after { opacity: 1; }
+
+.creneau__support { position: relative; color: #9aa3c2; }
+.creneau__crochet { width: 40px; height: 26px; display: block; }
+.creneau__numero {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  font-family: var(--police-code);
+  font-size: 0.64rem;
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+.creneau__pendu { display: flex; flex-direction: column; align-items: center; margin-top: 0.55rem; }
+.creneau__absent { display: none; }
+.creneau.statut-emprunte .creneau__pendu { display: none; }
+.creneau.statut-emprunte .creneau__absent { display: flex; margin-top: 1.6rem; }
+
+.anneau {
+  width: 11px;
+  height: 11px;
+  border: 3px solid var(--accent-a);
+  border-radius: 50%;
+  margin-bottom: -5px;
+  position: relative;
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.6);
+}
+.creneau.type-baie .anneau { border-color: var(--baie-a); }
+
+.etiquette {
+  background: var(--verre-vif);
+  backdrop-filter: blur(6px);
+  border-radius: 12px;
+  padding: 0.5rem 0.35rem 0.45rem;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 22px rgba(90, 120, 200, 0.2);
+  border-top: 3px solid var(--accent-a);
+  border-left: 1px solid var(--verre-bord);
+  border-right: 1px solid var(--verre-bord);
+  border-bottom: 1px solid var(--verre-bord);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.creneau.type-baie .etiquette { border-top-color: var(--baie-a); }
+.creneau:hover .etiquette { transform: translateY(-3px); box-shadow: 0 14px 28px rgba(90, 120, 200, 0.26); }
+
+.etiquette__type-icone { display: flex; justify-content: center; margin-bottom: 0.25rem; }
+.icone-cle { width: 13px; height: 13px; flex-shrink: 0; }
+.etiquette__type-icone .icone-cle:not(:first-child) { margin-left: -6px; }
+.etiquette__type-icone .icone-cle:nth-child(1) { transform: rotate(-8deg); }
+.etiquette__type-icone .icone-cle:nth-child(3) { transform: rotate(8deg); }
+
+.etiquette__nom {
+  font-size: 0.7rem;
+  line-height: 1.15;
+  margin-bottom: 0.1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.etiquette__type-libelle { display: none; } /* la couleur du dégradé suffit à distinguer le type, sur une carte aussi compacte */
+.etiquette__cles { font-family: var(--police-code); font-size: 0.62rem; color: var(--accent-a); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.creneau.type-baie .etiquette__cles { color: var(--baie-a); }
+
+/* Ticket laissé sur le crochet quand le trousseau est décroché */
+.ticket {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px dashed rgba(217, 92, 83, 0.45);
+  border-radius: 10px;
+  padding: 0.4rem 0.35rem;
+  font-size: 0.62rem;
+  color: #a8443b;
+  text-align: center;
+  box-shadow: 0 8px 18px rgba(140, 90, 90, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.ticket__label { font-weight: 700; text-transform: uppercase; font-size: 0.52rem; letter-spacing: 0.06em; }
+.ticket__detenteur {
+  font-weight: 700;
+  font-family: var(--police-affichage);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ticket__date { font-size: 0.56rem; opacity: 0.85; }
+
+.creneau__action {
+  width: 100%;
+  margin-top: 0.4rem;
+  background-color: #e0a512;
+  background: var(--accent-degrade, linear-gradient(135deg, #e0a512, #ffd873));
+  color: #fff;
+  box-shadow: 0 6px 14px var(--accent-ombre, rgba(196, 148, 20, 0.3));
+  font-size: 0.66rem;
+  padding: 0.35rem 0.3rem;
+}
+.creneau.type-baie .creneau__action {
+  background-color: #1f9e5c;
+  background: var(--baie-degrade, linear-gradient(135deg, #1f9e5c, #7be08a));
+  box-shadow: 0 6px 14px var(--baie-ombre, rgba(31, 158, 92, 0.28));
+}
+.creneau__action:hover { filter: brightness(1.05); }
+
+/* =======================================================================
+   État vide
+   ======================================================================= */
+
+.etat-vide { position: relative; z-index: 1; text-align: center; padding: 3rem 1rem; color: var(--ink-dim); }
+.etat-vide__icone { width: 40px; height: 40px; margin-bottom: 0.5rem; }
+
+/* =======================================================================
+   Boîtes de dialogue
+   ======================================================================= */
+
+dialog.dialogue {
+  border: 1px solid var(--verre-bord);
+  border-radius: 22px;
+  padding: 1.5rem;
+  max-width: 420px;
+  width: calc(100% - 2rem);
+  background: var(--verre-vif);
+  backdrop-filter: var(--flou-verre);
+  -webkit-backdrop-filter: var(--flou-verre);
+  box-shadow: 0 30px 80px rgba(60, 80, 150, 0.28);
+}
+dialog.dialogue--large { max-width: 520px; }
+dialog.dialogue::backdrop { background: rgba(60, 80, 150, 0.25); backdrop-filter: blur(2px); }
+
+.formulaire h2 { margin-bottom: 1rem; }
+
+.champ { display: block; margin-bottom: 0.85rem; font-size: 0.85rem; }
+.champ span { display: block; margin-bottom: 0.3rem; font-weight: 600; }
+.champ em { color: var(--ink-dim); font-weight: 400; font-style: normal; font-size: 0.75rem; }
+.champ input, .champ select, .champ textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--ligne);
+  background: rgba(255, 255, 255, 0.75);
+  font-family: inherit;
+  font-size: 16px; /* jamais moins : Safari iOS zoome automatiquement sous 16px au focus */
+}
+.champ input:focus-visible, .champ select:focus-visible, .champ textarea:focus-visible { outline: 2px solid var(--marque-a); }
+.champ textarea { resize: vertical; }
+
+.champ--ligne { display: flex; gap: 0.7rem; }
+.champ--ligne .champ { flex: 1; margin-bottom: 0.85rem; }
+.champ--crochet { max-width: 120px; flex: 0 0 auto; }
+
+.liste-clefs-form { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.5rem; }
+.ligne-clef { display: grid; grid-template-columns: 1fr 90px auto; gap: 0.4rem; align-items: center; }
+.ligne-clef input {
+  padding: 0.4rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--ligne);
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 0.82rem;
+}
+.ligne-clef__supprimer {
+  border: none;
+  background: transparent;
+  color: var(--out-fg);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.formulaire__actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.1rem; }
+
+.dialogue__fermer {
+  position: absolute;
+  top: 0.9rem;
+  right: 1rem;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--ink-dim);
+}
+
+/* -- Panneau détail -- */
+
+.detail__entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+  padding-right: 1.5rem;
+}
+.detail__type { font-family: var(--police-code); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); margin: 0 0 0.2rem; }
+
+.detail__emprunt { background: var(--out-bg); color: var(--out-fg); padding: 0.5rem 0.7rem; border-radius: 10px; font-size: 0.85rem; margin: 0 0 1rem; }
+
+.detail-clefs {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 1px solid var(--ligne);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.5);
+}
+.detail-clefs li { display: flex; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; font-size: 0.84rem; border-bottom: 1px solid var(--ligne); }
+.detail-clefs li:last-child { border-bottom: none; }
+.detail-clefs__code { font-family: var(--police-code); color: var(--marque-a); }
+
+.detail__notes { font-size: 0.85rem; color: var(--ink-dim); margin: 0 0 1rem; }
+
+.detail__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.2rem; }
+
+.detail__qr {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  background: rgba(111, 106, 216, 0.07);
+  border-radius: 14px;
+  padding: 0.9rem;
+  margin-bottom: 1.2rem;
+}
+.detail__qr-image { width: 92px; height: 92px; flex-shrink: 0; background: #fff; border-radius: 8px; padding: 6px; box-shadow: 0 6px 16px rgba(90, 120, 200, 0.18); }
+.detail__qr-image svg { width: 100%; height: 100%; display: block; }
+.detail__qr-texte p { font-size: 0.78rem; color: var(--ink-dim); margin: 0 0 0.55rem; }
+
+.detail__sous-titre { font-size: 0.9rem; margin-bottom: 0.5rem; border-top: 1px solid var(--ligne); padding-top: 0.9rem; }
+
+.pastille { font-size: 0.72rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 999px; white-space: nowrap; }
+.pastille--disponible { background: var(--ok-bg); color: var(--ok-fg); }
+.pastille--emprunte { background: var(--out-bg); color: var(--out-fg); }
+.pastille--role-admin { background: rgba(111, 106, 216, 0.14); color: var(--marque-a); }
+.pastille--role-utilisateur { background: rgba(35, 179, 186, 0.14); color: var(--baie-a); }
+
+.dialogue__intro { font-size: 0.82rem; color: var(--ink-dim); margin: 0 0 1rem; }
+
+.liste-utilisateurs { list-style: none; margin: 0 0 1.3rem; padding: 0; border: 1px solid var(--ligne); border-radius: 12px; overflow: hidden; }
+.ligne-utilisateur {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid var(--ligne);
+  font-size: 0.85rem;
+  background: rgba(255, 255, 255, 0.5);
+}
+.ligne-utilisateur:last-child { border-bottom: none; }
+.ligne-utilisateur__nom { flex: 1; }
+.ligne-utilisateur__supprimer {
+  border: none;
+  background: transparent;
+  color: var(--out-fg);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.2rem 0.4rem;
+}
+.ligne-utilisateur__supprimer:disabled { color: var(--ink-dim); cursor: not-allowed; opacity: 0.5; }
+
+.historique { list-style: none; margin: 0; padding: 0; max-height: 200px; overflow-y: auto; }
+.historique__item { display: flex; flex-direction: column; gap: 0.05rem; padding: 0.5rem 0; border-bottom: 1px dashed var(--ligne); font-size: 0.82rem; }
+.historique__item:last-child { border-bottom: none; }
+.historique__action { font-weight: 600; }
+.historique__meta { color: var(--ink-dim); font-size: 0.75rem; }
+.historique__commentaire { font-style: italic; color: var(--ink-dim); }
+.historique__vide { color: var(--ink-dim); font-size: 0.82rem; }
+
+/* =======================================================================
+   Pied de page
+   ======================================================================= */
+
+.pied-de-page { position: relative; z-index: 1; text-align: center; padding: 1.5rem; font-size: 0.75rem; color: var(--ink-dim); }
+.pied-de-page__copyright { margin-top: 0.3rem; opacity: 0.75; }
+
+/* =======================================================================
+   Étiquette imprimable (porte-clés)
+   ======================================================================= */
+
+.etiquette-impression { display: none; }
+
+@media print {
+  body { background: #fff; }
+  body::before, body::after { display: none; }
+  body > *:not(#zone-impression) { display: none !important; }
+  #zone-impression {
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25cm;
+    width: 6cm;
+    margin: 0 auto;
+    padding: 0.4cm;
+    font-family: var(--police-texte);
+    text-align: center;
+  }
+  .etiquette-impression__type { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em; color: #555; margin: 0; }
+  .etiquette-impression__nom { font-size: 13pt; font-weight: 700; margin: 0; }
+  .etiquette-impression__qr svg { width: 3.2cm; height: 3.2cm; }
+  .etiquette-impression__codes,
+  .etiquette-impression__crochet { font-size: 9pt; color: #333; margin: 0; font-family: var(--police-code); }
+}
+
+/* =======================================================================
+   Accessibilité / mobile
+   ======================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .creneau .etiquette, .bouton { transition: none; }
+}
+
+@media (max-width: 560px) {
+  .entete {
+    padding: 0.9rem 1rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .entete__fichier {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .entete__fichier .bouton { flex: 1 1 auto; text-align: center; font-size: 0.8rem; padding: 0.45rem 0.6rem; }
+
+  .conteneur { padding: 1rem; }
+
+  .barre-outils { flex-direction: column; align-items: stretch; }
+  .barre-outils__filtres { justify-content: stretch; }
+  .barre-outils__filtres select, .barre-outils__filtres button { flex: 1 1 100%; }
+
+  .armoire { padding: 1rem; border-radius: 20px; }
+  .armoire__entete { flex-direction: column; align-items: stretch; gap: 0.7rem; }
+  .armoire__selecteur-porte { width: 100%; }
+  .bouton-porte { flex: 1; text-align: center; }
+
+  .porte {
+    grid-template-columns: repeat(10, minmax(30px, 1fr));
+    gap: 1.1rem 0.25rem;
+    padding: 1rem 0.35rem 0.7rem;
+    overflow-x: auto; /* filet de sécurité si l'écran est plus étroit que 10 crochets lisibles */
+  }
+  .creneau { min-height: 112px; }
+  .etiquette { padding: 0.35rem 0.2rem 0.3rem; border-radius: 9px; }
+  .etiquette__nom { font-size: 0.56rem; -webkit-line-clamp: 2; margin-bottom: 0.05rem; }
+  .etiquette__cles { font-size: 0.5rem; }
+  .creneau__numero { font-size: 0.5rem; }
+  .creneau__action { font-size: 0.52rem; padding: 0.28rem 0.1rem; margin-top: 0.3rem; }
+  .icone-cle { width: 10px; height: 10px; }
+  .anneau { width: 9px; height: 9px; border-width: 2px; }
+
+  .champ--ligne { flex-direction: column; gap: 0.85rem; }
+  .champ--crochet { max-width: none; }
+
+  dialog.dialogue { padding: 1.1rem; border-radius: 18px; max-height: calc(100vh - 2rem); overflow-y: auto; }
+
+  .ecran-connexion { padding: 1rem; }
+  .ecran-connexion__panneau { padding: 1.8rem 1.4rem; }
+
+  .detail__qr { flex-direction: column; align-items: flex-start; }
+  .detail__actions .bouton { flex: 1 1 auto; }
+}
+
+@media (max-width: 400px) {
+  .barre-outils__filtres { flex-direction: column; }
+  .ligne-clef { grid-template-columns: 1fr; }
+  .ligne-clef__supprimer { justify-self: end; }
+}
