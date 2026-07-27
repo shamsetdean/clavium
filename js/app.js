@@ -8,36 +8,40 @@
  * app.js
  * ---------------------------------------------------------------------
  * Logique de la Boîte à clés virtuelle.
- * Ne touche jamais localStorage / fetch / fichiers directement :
- * toute la persistance passe par storage.js. La génération de QR code
- * passe par la librairie vendée js/vendor/qrcode.js (aucun appel réseau).
+ * Ne touche jamais Supabase directement : toute la persistance passe par
+ * data.js (js/data.js). La génération de QR code passe par la librairie
+ * vendée js/vendor/qrcode.js (aucun appel réseau).
+ *
+ * Sécurité : les restrictions de rôle appliquées ici (masquer un bouton,
+ * ne pas afficher un formulaire) sont un confort d'interface, PAS la
+ * barrière de sécurité réelle — celle-ci vit dans les règles RLS de
+ * Supabase (supabase/schema.sql), qui refusent la requête même si
+ * quelqu'un contournait l'interface.
  *
  * Modèle : l'armoire contient des TROUSSEAUX suspendus à des crochets
  * numérotés. Un trousseau est soit :
  *   - "batiment" : plusieurs clés physiques (ouvre le bâtiment où est
- *     stockée la baie, plus les accès annexes)
- *   - "baie"     : une seule clé, celle de la baie uniquement
+ *     stockée la baie, plus les accès annexes) — dégradé or/ambre
+ *   - "baie"     : une seule clé, celle de la baie uniquement — dégradé vert
  * ---------------------------------------------------------------------
  */
 
 const App = (() => {
-  /** Adresse recevant une copie du JSON à chaque modification (voir notifierParEmail). */
-  const EMAIL_NOTIFICATION = "shamsetdean@gmail.com";
-
-  /** État en mémoire de l'application */
+  /** État en mémoire de l'application (miroir de ce qui est chargé depuis Supabase) */
   const etat = {
-    donnees: { version: 2, trousseaux: [], utilisateurs: [] },
-    utilisateurCourant: null, // { nom, role }
+    trousseaux: [],
+    utilisateurs: [],
+    utilisateurCourant: null, // { id, nom, role }
     recherche: "",
-    filtreStatut: "toutes",  // toutes | disponible | emprunte
-    filtreType: "toutes",    // toutes | batiment | baie
+    filtreStatut: "toutes", // toutes | disponible | emprunte
+    filtreType: "toutes", // toutes | batiment | baie
     trousseauEnEdition: null,
   };
 
-  /** Capacité physique de l'armoire : deux portes, 7 crochets par ligne. */
-  const COLONNES_PAR_LIGNE = 7;
-  const LIGNES_PORTE_A = 4; // porte gauche : 4 × 7 = 28 crochets (n° 1 à 28)
-  const LIGNES_PORTE_B = 3; // porte droite : 3 × 7 = 21 crochets (n° 29 à 49)
+  /** Capacité physique de l'armoire : deux portes, 10 crochets par ligne. */
+  const COLONNES_PAR_LIGNE = 10;
+  const LIGNES_PORTE_A = 4; // porte A : 4 × 10 = 40 crochets (n° 1 à 40)
+  const LIGNES_PORTE_B = 3; // porte B : 3 × 10 = 30 crochets (n° 41 à 70)
   const CROCHETS_PORTE_A = COLONNES_PAR_LIGNE * LIGNES_PORTE_A;
   const TOTAL_CROCHETS = CROCHETS_PORTE_A + COLONNES_PAR_LIGNE * LIGNES_PORTE_B;
 
@@ -69,18 +73,14 @@ const App = (() => {
   function capterElements() {
     els.porteA = document.getElementById("porte-a");
     els.porteB = document.getElementById("porte-b");
+    els.boutonsPorte = document.querySelectorAll(".bouton-porte");
     els.recherche = document.getElementById("champ-recherche");
     els.filtreStatut = document.getElementById("filtre-statut");
     els.filtreType = document.getElementById("filtre-type");
     els.compteur = document.getElementById("compteur-resultats");
     els.boutonAjouter = document.getElementById("bouton-ajouter");
 
-    els.boutonImporter = document.getElementById("bouton-importer");
-    els.inputImporter = document.getElementById("input-importer");
     els.boutonExporter = document.getElementById("bouton-exporter");
-    els.boutonOuvrirFichier = document.getElementById("bouton-ouvrir-fichier");
-    els.boutonEnregistrerFichier = document.getElementById("bouton-enregistrer-fichier");
-    els.etiquetteFichier = document.getElementById("etiquette-fichier");
 
     els.dialogueForm = document.getElementById("dialogue-form");
     els.formTrousseau = document.getElementById("form-trousseau");
@@ -103,42 +103,12 @@ const App = (() => {
     els.dialogueUtilisateurs = document.getElementById("dialogue-utilisateurs");
     els.boutonFermerUtilisateurs = document.getElementById("bouton-fermer-utilisateurs");
     els.listeUtilisateurs = document.getElementById("liste-utilisateurs");
-    els.formUtilisateur = document.getElementById("form-utilisateur");
-    els.erreurUtilisateur = document.getElementById("erreur-utilisateur");
   }
 
   // -- Utilitaires ---------------------------------------------------------
 
   function estAdmin() {
     return etat.utilisateurCourant?.role === "admin";
-  }
-
-  /**
-   * Prépare une copie de sauvegarde après une modification : télécharge le
-   * JSON à jour et ouvre un brouillon email pré-rempli vers EMAIL_NOTIFICATION.
-   *
-   * Limite technique assumée (voir README) : un navigateur ne peut ni
-   * joindre un fichier automatiquement à un email, ni l'envoyer sans action
-   * humaine. Cette fonction fait donc le maximum possible sans service tiers
-   * ni serveur : télécharger + préparer le brouillon. Il reste un geste
-   * manuel (joindre le fichier téléchargé, cliquer sur Envoyer).
-   */
-  function notifierParEmail(resume) {
-    const horodatage = new Date().toISOString().replace(/[:.]/g, "-");
-    const nomFichier = `boite-a-cles-${horodatage}.json`;
-    Depot.exporterVersFichier(etat.donnees, nomFichier);
-
-    const sujet = encodeURIComponent(`Boîte à clés — mise à jour : ${resume}`);
-    const corps = encodeURIComponent(
-      `Modification enregistrée dans l'armoire à clés : ${resume}\n` +
-        `Par : ${etat.utilisateurCourant?.nom || "—"}\n` +
-        `Date : ${new Date().toLocaleString("fr-FR")}\n\n` +
-        `Le fichier "${nomFichier}" vient d'être téléchargé sur cet ordinateur. ` +
-        `Un navigateur ne peut pas joindre de fichier automatiquement à un email : ` +
-        `merci de le joindre à ce message avant de l'envoyer.\n\n` +
-        `— Boîte à clés virtuelle`
-    );
-    window.location.href = `mailto:${EMAIL_NOTIFICATION}?subject=${sujet}&body=${corps}`;
   }
 
   function genererId(prefixe) {
@@ -157,13 +127,13 @@ const App = (() => {
     });
   }
 
-  function ajouterHistorique(trousseau, action, personne, commentaire) {
-    trousseau.historique.push({
+  function nouvelleEntreeHistorique(action, personne, commentaire) {
+    return {
       action,
       personne: personne || "—",
       date: new Date().toISOString(),
       commentaire: commentaire || "",
-    });
+    };
   }
 
   function echapper(texte) {
@@ -172,29 +142,39 @@ const App = (() => {
     return div.innerHTML;
   }
 
-  async function persister() {
-    Depot.sauvegarderLocal(etat.donnees);
-    if (els.boutonEnregistrerFichier.hidden === false) {
-      els.boutonEnregistrerFichier.classList.add("a-enregistrer");
-    }
+  function trouverTrousseau(id) {
+    return etat.trousseaux.find((t) => t.id === id) || null;
   }
 
-  function trouverTrousseau(id) {
-    return etat.donnees.trousseaux.find((t) => t.id === id) || null;
+  /** Recharge la liste des trousseaux depuis Supabase et redessine l'armoire. */
+  async function rechargerEtRendre() {
+    etat.trousseaux = await Donnees.chargerTrousseaux();
+    rendre();
+  }
+
+  /** Affiche une erreur Supabase de façon lisible (ex. contrainte crochet unique violée). */
+  function afficherErreurSupabase(erreur) {
+    if (erreur?.code === "23505") {
+      window.alert("Ce numéro de crochet vient d'être pris par un autre trousseau. Choisissez-en un autre.");
+    } else {
+      window.alert(erreur?.message || "Une erreur est survenue en contactant Supabase.");
+    }
   }
 
   // -- QR code -------------------------------------------------------------
 
-  /** Contenu encodé sur l'étiquette : identifie le trousseau sans ambiguïté. */
+  /**
+   * Lien scanné sur le porte-clés physique : ouvre le site directement sur ce
+   * trousseau, prêt pour un emprunt ou une restitution en un geste. La
+   * connexion reste requise (le lien ne contient aucun secret, seulement
+   * l'identifiant du trousseau).
+   */
   function contenuQr(trousseau) {
-    const codes = trousseau.clefs.map((c) => c.code).filter(Boolean).join("+");
-    return [
-      "BOITEACLES",
-      trousseau.id,
-      trousseau.type,
-      trousseau.nom,
-      codes,
-    ].join("|");
+    const url = new URL(window.location.href);
+    url.search = "";
+    url.hash = "";
+    url.searchParams.set("trousseau", trousseau.id);
+    return url.toString();
   }
 
   function genererQrSvg(texte) {
@@ -208,16 +188,11 @@ const App = (() => {
 
   function trousseauxFiltres() {
     const q = etat.recherche.trim().toLowerCase();
-    return etat.donnees.trousseaux.filter((t) => {
+    return etat.trousseaux.filter((t) => {
       if (etat.filtreStatut !== "toutes" && t.statut !== etat.filtreStatut) return false;
       if (etat.filtreType !== "toutes" && t.type !== etat.filtreType) return false;
       if (!q) return true;
-      const cible = [
-        t.nom,
-        t.detenteur,
-        String(t.crochet ?? ""),
-        ...t.clefs.map((c) => `${c.repere} ${c.code}`),
-      ]
+      const cible = [t.nom, t.detenteur, String(t.crochet ?? ""), ...t.clefs.map((c) => `${c.repere} ${c.code}`)]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -226,12 +201,12 @@ const App = (() => {
   }
 
   function trousseauParCrochet(numero) {
-    return etat.donnees.trousseaux.find((t) => t.crochet === numero) || null;
+    return etat.trousseaux.find((t) => t.crochet === numero) || null;
   }
 
-  /** Premier numéro de crochet libre dans l'armoire (1 à 49), ou null si elle est pleine. */
+  /** Premier numéro de crochet libre dans l'armoire (1 à 70), ou null si elle est pleine. */
   function premierCrochetLibre() {
-    const occupes = new Set(etat.donnees.trousseaux.map((t) => t.crochet));
+    const occupes = new Set(etat.trousseaux.map((t) => t.crochet));
     for (let n = 1; n <= TOTAL_CROCHETS; n++) {
       if (!occupes.has(n)) return n;
     }
@@ -240,7 +215,7 @@ const App = (() => {
 
   function rendre() {
     const idsCorrespondants = new Set(trousseauxFiltres().map((t) => t.id));
-    const nombreOccupes = etat.donnees.trousseaux.length;
+    const nombreOccupes = etat.trousseaux.length;
     els.compteur.textContent =
       nombreOccupes === 0
         ? "Aucun trousseau"
@@ -265,7 +240,7 @@ const App = (() => {
     if (!trousseau) {
       creneau.classList.add("creneau--vide");
       creneau.setAttribute("aria-label", `Crochet ${numero}, libre`);
-      creneau.addEventListener("click", () => ouvrirFormulaire(null, numero));
+      if (estAdmin()) creneau.addEventListener("click", () => ouvrirFormulaire(null, numero));
       return frag;
     }
 
@@ -309,48 +284,45 @@ const App = (() => {
 
   // -- Actions : emprunt / retour / suppression ----------------------------
 
-  function demarrerEmprunt(id) {
+  async function demarrerEmprunt(id) {
     const trousseau = trouverTrousseau(id);
     if (!trousseau) return;
     const personne = window.prompt(`Nom de la personne qui décroche « ${trousseau.nom} » :`);
     if (personne === null || personne.trim() === "") return;
-    trousseau.statut = "emprunte";
-    trousseau.detenteur = personne.trim();
-    trousseau.dateEmprunt = new Date().toISOString();
-    trousseau.dateRetourPrevue = null;
-    ajouterHistorique(trousseau, "emprunt", personne.trim(), "");
-    persister();
-    rendre();
-    if (etat.trousseauEnEdition === id) ouvrirDetail(id);
-    notifierParEmail(`« ${trousseau.nom} » décroché par ${trousseau.detenteur}`);
+
+    try {
+      await Donnees.emprunterTrousseau(id, personne.trim());
+      await rechargerEtRendre();
+      if (etat.trousseauEnEdition === id) ouvrirDetail(id);
+    } catch (erreur) {
+      afficherErreurSupabase(erreur);
+    }
   }
 
-  function restituerTrousseau(id) {
-    const trousseau = trouverTrousseau(id);
-    if (!trousseau) return;
-    const detenteurPrecedent = trousseau.detenteur;
-    trousseau.statut = "disponible";
-    trousseau.detenteur = null;
-    trousseau.dateEmprunt = null;
-    trousseau.dateRetourPrevue = null;
-    ajouterHistorique(trousseau, "retour", detenteurPrecedent, "");
-    persister();
-    rendre();
-    if (etat.trousseauEnEdition === id) ouvrirDetail(id);
-    notifierParEmail(`« ${trousseau.nom} » raccroché (rendu par ${detenteurPrecedent || "—"})`);
+  async function restituerTrousseau(id) {
+    try {
+      await Donnees.restituerTrousseau(id);
+      await rechargerEtRendre();
+      if (etat.trousseauEnEdition === id) ouvrirDetail(id);
+    } catch (erreur) {
+      afficherErreurSupabase(erreur);
+    }
   }
 
-  function supprimerTrousseau(id) {
+  async function supprimerTrousseau(id) {
     if (!estAdmin()) return;
     const trousseau = trouverTrousseau(id);
     if (!trousseau) return;
     const confirme = window.confirm(`Retirer définitivement « ${trousseau.nom} » de l'armoire ?`);
     if (!confirme) return;
-    etat.donnees.trousseaux = etat.donnees.trousseaux.filter((t) => t.id !== id);
-    persister();
-    rendre();
-    fermerDetail();
-    notifierParEmail(`« ${trousseau.nom} » retiré de l'armoire`);
+
+    try {
+      await Donnees.supprimerTrousseau(id);
+      await rechargerEtRendre();
+      fermerDetail();
+    } catch (erreur) {
+      afficherErreurSupabase(erreur);
+    }
   }
 
   // -- Formulaire : lignes de clés dynamiques ------------------------------
@@ -376,7 +348,9 @@ const App = (() => {
     const lignes = els.listeClefsForm.querySelectorAll(".ligne-clef");
 
     if (estBaie && lignes.length > 1) {
-      lignes.forEach((l, i) => { if (i > 0) l.remove(); });
+      lignes.forEach((l, i) => {
+        if (i > 0) l.remove();
+      });
     }
     if (els.listeClefsForm.children.length === 0) {
       els.listeClefsForm.appendChild(creerLigneClef());
@@ -414,7 +388,7 @@ const App = (() => {
     els.formTrousseau.elements["nom"].focus();
   }
 
-  function soumettreFormulaire(evt) {
+  async function soumettreFormulaire(evt) {
     evt.preventDefault();
     const donneesForm = new FormData(els.formTrousseau);
     const id = donneesForm.get("id");
@@ -448,37 +422,28 @@ const App = (() => {
       return;
     }
 
-    if (id) {
-      const trousseau = trouverTrousseau(id);
-      if (!trousseau) return;
-      trousseau.nom = nom;
-      trousseau.type = type;
-      trousseau.crochet = crochet;
-      trousseau.clefs = clefs;
-      trousseau.notes = notes;
-      ajouterHistorique(trousseau, "modification", "—", "Fiche mise à jour.");
-    } else {
-      const nouveauTrousseau = {
-        id: genererId("t"),
-        nom,
-        type,
-        crochet,
-        clefs,
-        statut: "disponible",
-        detenteur: null,
-        dateEmprunt: null,
-        dateRetourPrevue: null,
-        notes,
-        historique: [],
-      };
-      ajouterHistorique(nouveauTrousseau, "creation", "—", "Trousseau enregistré dans la boîte.");
-      etat.donnees.trousseaux.unshift(nouveauTrousseau);
-    }
+    const boutonValider = els.formTrousseau.querySelector('button[type="submit"]');
+    boutonValider.disabled = true;
 
-    persister();
-    rendre();
-    els.dialogueForm.close();
-    notifierParEmail(id ? `« ${nom} » modifié` : `« ${nom} » ajouté à l'armoire`);
+    try {
+      if (id) {
+        const trousseauActuel = trouverTrousseau(id);
+        const historique = [
+          ...(trousseauActuel?.historique || []),
+          nouvelleEntreeHistorique("modification", "—", "Fiche mise à jour."),
+        ];
+        await Donnees.modifierTrousseau(id, { nom, type, crochet, clefs, notes, historique });
+      } else {
+        const historique = [nouvelleEntreeHistorique("creation", "—", "Trousseau enregistré dans la boîte.")];
+        await Donnees.creerTrousseau({ nom, type, crochet, clefs, notes, historique });
+      }
+      await rechargerEtRendre();
+      els.dialogueForm.close();
+    } catch (erreur) {
+      afficherErreurSupabase(erreur);
+    } finally {
+      boutonValider.disabled = false;
+    }
   }
 
   // -- Panneau détail / historique / QR ------------------------------------
@@ -489,7 +454,10 @@ const App = (() => {
     etat.trousseauEnEdition = id;
 
     const listeClefsHtml = trousseau.clefs
-      .map((c) => `<li><span class="detail-clefs__repere">${echapper(c.repere || "—")}</span><span class="detail-clefs__code">${echapper(c.code || "—")}</span></li>`)
+      .map(
+        (c) =>
+          `<li><span class="detail-clefs__repere">${echapper(c.repere || "—")}</span><span class="detail-clefs__code">${echapper(c.code || "—")}</span></li>`
+      )
       .join("");
 
     const historiqueHtml = [...trousseau.historique]
@@ -529,7 +497,7 @@ const App = (() => {
       <div class="detail__qr">
         <div class="detail__qr-image" aria-hidden="true"></div>
         <div class="detail__qr-texte">
-          <p>Étiquette à imprimer et fixer sur le porte-clés, pour identifier le trousseau d'un coup de scan.</p>
+          <p>Étiquette à imprimer et fixer sur le porte-clés : un scan ouvre directement ce trousseau, prêt pour un emprunt ou une restitution (connexion toujours requise).</p>
           <button type="button" class="bouton bouton--brass" data-action="imprimer">Imprimer l'étiquette</button>
         </div>
       </div>
@@ -581,133 +549,70 @@ const App = (() => {
     window.print();
   }
 
-  // -- Import / export / fichier local -------------------------------------
-
-  async function gererImport(fichier) {
-    if (!estAdmin()) return;
-    try {
-      const donnees = await Depot.importerDepuisInput(fichier);
-      etat.donnees = donnees;
-      persister();
-      rendre();
-    } catch (erreur) {
-      window.alert(erreur.message);
-    }
-  }
-
   function gererExport() {
-    Depot.exporterVersFichier(etat.donnees);
+    Donnees.exporterVersFichier(etat.trousseaux);
   }
 
-  async function gererOuvertureFichier() {
+  // -- Gestion des utilisateurs (admin uniquement, lecture + suppression) ---
+
+  async function ouvrirDialogueUtilisateurs() {
     if (!estAdmin()) return;
     try {
-      const { donnees, nomFichier } = await Depot.ouvrirFichierLocal();
-      etat.donnees = donnees;
-      persister();
-      rendre();
-      els.etiquetteFichier.textContent = `Fichier ouvert : ${nomFichier}`;
-      els.etiquetteFichier.hidden = false;
-      els.boutonEnregistrerFichier.hidden = false;
-      els.boutonEnregistrerFichier.classList.remove("a-enregistrer");
+      etat.utilisateurs = await Donnees.chargerUtilisateurs();
+      rendreListeUtilisateurs();
+      els.dialogueUtilisateurs.showModal();
     } catch (erreur) {
-      if (erreur.name !== "AbortError") window.alert(erreur.message);
+      afficherErreurSupabase(erreur);
     }
-  }
-
-  async function gererEnregistrementFichier() {
-    if (!estAdmin()) return;
-    try {
-      await Depot.enregistrerDansFichierOuvert(etat.donnees);
-      els.boutonEnregistrerFichier.classList.remove("a-enregistrer");
-    } catch (erreur) {
-      window.alert(erreur.message);
-    }
-  }
-
-  // -- Gestion des utilisateurs (admin uniquement) --------------------------
-
-  async function hacherSHA256(texte) {
-    const octets = new TextEncoder().encode(texte);
-    const empreinte = await crypto.subtle.digest("SHA-256", octets);
-    return Array.from(new Uint8Array(empreinte)).map((o) => o.toString(16).padStart(2, "0")).join("");
-  }
-
-  function ouvrirDialogueUtilisateurs() {
-    if (!estAdmin()) return;
-    els.erreurUtilisateur.hidden = true;
-    els.formUtilisateur.reset();
-    rendreListeUtilisateurs();
-    els.dialogueUtilisateurs.showModal();
   }
 
   function rendreListeUtilisateurs() {
     els.listeUtilisateurs.innerHTML = "";
-    for (const utilisateur of etat.donnees.utilisateurs) {
+    for (const utilisateur of etat.utilisateurs) {
       const li = document.createElement("li");
       li.className = "ligne-utilisateur";
-      const estSoiMeme = normaliserNomComparaison(utilisateur.nom) === normaliserNomComparaison(etat.utilisateurCourant.nom);
+      const estSoiMeme = utilisateur.id === etat.utilisateurCourant.id;
       const dernierAdmin =
-        utilisateur.role === "admin" && etat.donnees.utilisateurs.filter((u) => u.role === "admin").length <= 1;
+        utilisateur.role === "admin" && etat.utilisateurs.filter((u) => u.role === "admin").length <= 1;
 
       li.innerHTML = `
         <span class="ligne-utilisateur__nom">${echapper(utilisateur.nom)}${estSoiMeme ? " (vous)" : ""}</span>
         <span class="pastille pastille--role-${utilisateur.role}">${LIBELLES_ROLE[utilisateur.role] || utilisateur.role}</span>
-        <button type="button" class="ligne-utilisateur__supprimer" aria-label="Supprimer ${echapper(utilisateur.nom)}" ${dernierAdmin ? "disabled title=\"Il doit rester au moins un administrateur\"" : ""}>✕</button>
+        <button type="button" class="ligne-utilisateur__supprimer" aria-label="Retirer l'accès de ${echapper(utilisateur.nom)}" ${dernierAdmin ? 'disabled title="Il doit rester au moins un administrateur"' : ""}>✕</button>
       `;
-      li.querySelector(".ligne-utilisateur__supprimer").addEventListener("click", () => supprimerUtilisateur(utilisateur.id));
+      li.querySelector(".ligne-utilisateur__supprimer").addEventListener("click", () => supprimerUtilisateur(utilisateur.id, utilisateur.nom));
       els.listeUtilisateurs.appendChild(li);
     }
   }
 
-  function normaliserNomComparaison(nom) {
-    return (nom || "").trim().toLowerCase();
-  }
-
-  async function soumettreUtilisateur(evt) {
-    evt.preventDefault();
-    els.erreurUtilisateur.hidden = true;
-    const donneesForm = new FormData(els.formUtilisateur);
-    const nom = donneesForm.get("nom").trim();
-    const motDePasse = donneesForm.get("motdepasse");
-    const role = donneesForm.get("role");
-
-    if (!nom || motDePasse.length < 6) {
-      els.erreurUtilisateur.textContent = "Nom requis, mot de passe d'au moins 6 caractères.";
-      els.erreurUtilisateur.hidden = false;
-      return;
-    }
-    if (etat.donnees.utilisateurs.some((u) => normaliserNomComparaison(u.nom) === normaliserNomComparaison(nom))) {
-      els.erreurUtilisateur.textContent = "Ce nom est déjà utilisé par un autre compte.";
-      els.erreurUtilisateur.hidden = false;
-      return;
-    }
-
-    const empreinte = await hacherSHA256(motDePasse);
-    etat.donnees.utilisateurs.push({ id: genererId("u"), nom, role, empreinte });
-    persister();
-    rendreListeUtilisateurs();
-    els.formUtilisateur.reset();
-    notifierParEmail(`utilisateur « ${nom} » ajouté (${LIBELLES_ROLE[role]})`);
-  }
-
-  function supprimerUtilisateur(id) {
-    const utilisateur = etat.donnees.utilisateurs.find((u) => u.id === id);
-    if (!utilisateur) return;
-    const dernierAdmin =
-      utilisateur.role === "admin" && etat.donnees.utilisateurs.filter((u) => u.role === "admin").length <= 1;
-    if (dernierAdmin) return;
-    const confirme = window.confirm(`Supprimer le compte de « ${utilisateur.nom} » ?`);
+  async function supprimerUtilisateur(id, nom) {
+    const confirme = window.confirm(
+      `Retirer l'accès de « ${nom} » ? Son compte de connexion restera visible dans Supabase Auth, mais il ne pourra plus rien faire dans l'armoire (à supprimer entièrement depuis le Dashboard si besoin).`
+    );
     if (!confirme) return;
-    etat.donnees.utilisateurs = etat.donnees.utilisateurs.filter((u) => u.id !== id);
-    persister();
-    rendreListeUtilisateurs();
-    notifierParEmail(`utilisateur « ${utilisateur.nom} » supprimé`);
+    try {
+      await Donnees.supprimerUtilisateur(id);
+      etat.utilisateurs = await Donnees.chargerUtilisateurs();
+      rendreListeUtilisateurs();
+    } catch (erreur) {
+      afficherErreurSupabase(erreur);
+    }
   }
 
   // -- Initialisation --------------------------------------------------
 
+  /** Affiche la porte A ou B, masque l'autre (une seule vue à la fois). */
+  function afficherPorte(porte) {
+    els.porteA.hidden = porte !== "a";
+    els.porteB.hidden = porte !== "b";
+    els.boutonsPorte.forEach((b) => b.setAttribute("aria-selected", String(b.dataset.porte === porte)));
+  }
+
   function attacherEvenements() {
+    els.boutonsPorte.forEach((bouton) => {
+      bouton.addEventListener("click", () => afficherPorte(bouton.dataset.porte));
+    });
+
     els.recherche.addEventListener("input", (e) => {
       etat.recherche = e.target.value;
       rendre();
@@ -731,26 +636,12 @@ const App = (() => {
     });
 
     els.boutonFermerDetail.addEventListener("click", fermerDetail);
-
-    els.boutonImporter.addEventListener("click", () => els.inputImporter.click());
-    els.inputImporter.addEventListener("change", (e) => {
-      const fichier = e.target.files[0];
-      if (fichier) gererImport(fichier);
-      e.target.value = "";
-    });
     els.boutonExporter.addEventListener("click", gererExport);
-
-    if (Depot.supportFileSystemAccess() && estAdmin()) {
-      els.boutonOuvrirFichier.hidden = false;
-      els.boutonOuvrirFichier.addEventListener("click", gererOuvertureFichier);
-      els.boutonEnregistrerFichier.addEventListener("click", gererEnregistrementFichier);
-    }
 
     if (estAdmin()) {
       els.boutonUtilisateurs.hidden = false;
       els.boutonUtilisateurs.addEventListener("click", ouvrirDialogueUtilisateurs);
       els.boutonFermerUtilisateurs.addEventListener("click", () => els.dialogueUtilisateurs.close());
-      els.formUtilisateur.addEventListener("submit", soumettreUtilisateur);
       els.dialogueUtilisateurs.addEventListener("click", (e) => {
         if (e.target === els.dialogueUtilisateurs) els.dialogueUtilisateurs.close();
       });
@@ -767,24 +658,45 @@ const App = (() => {
   function appliquerRestrictionsRole() {
     if (estAdmin()) return;
     els.boutonAjouter.hidden = true;
-    els.boutonImporter.hidden = true;
   }
 
   let initialise = false;
 
-  /**
-   * @param {object} donneesPrechargees - données déjà chargées par Auth (évite un double chargement)
-   * @param {{nom: string, role: "admin"|"utilisateur"}} utilisateur - compte qui vient de se connecter
-   */
-  async function initialiser(donneesPrechargees, utilisateur) {
+  /** @param {{id: string, nom: string, role: "admin"|"utilisateur"}} utilisateur - profil qui vient de se connecter */
+  async function initialiser(utilisateur) {
     if (initialise) return; // évite une double init si Auth rappelle après un rechargement
     initialise = true;
-    etat.donnees = donneesPrechargees || (await Depot.chargerAuDemarrage());
     etat.utilisateurCourant = utilisateur;
     capterElements();
     attacherEvenements();
     appliquerRestrictionsRole();
+
+    try {
+      etat.trousseaux = await Donnees.chargerTrousseaux();
+    } catch (erreur) {
+      afficherErreurSupabase(erreur);
+      etat.trousseaux = [];
+    }
     rendre();
+    ouvrirDepuisLienDirect();
+  }
+
+  /** Si l'URL contient ?trousseau=ID (lien scanné depuis l'étiquette QR), ouvre directement son détail. */
+  function ouvrirDepuisLienDirect() {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("trousseau");
+    if (!id) return;
+
+    const trousseau = trouverTrousseau(id);
+    if (trousseau) {
+      afficherPorte(trousseau.crochet && trousseau.crochet > CROCHETS_PORTE_A ? "b" : "a");
+      ouvrirDetail(id);
+    }
+
+    // Nettoie l'URL pour ne pas rouvrir le même trousseau à chaque rechargement.
+    const urlPropre = new URL(window.location.href);
+    urlPropre.searchParams.delete("trousseau");
+    window.history.replaceState({}, "", urlPropre);
   }
 
   return { initialiser };
