@@ -34,6 +34,13 @@ const App = (() => {
     trousseauEnEdition: null,
   };
 
+  /** Capacité physique de l'armoire : deux portes, 7 crochets par ligne. */
+  const COLONNES_PAR_LIGNE = 7;
+  const LIGNES_PORTE_A = 4; // porte gauche : 4 × 7 = 28 crochets (n° 1 à 28)
+  const LIGNES_PORTE_B = 3; // porte droite : 3 × 7 = 21 crochets (n° 29 à 49)
+  const CROCHETS_PORTE_A = COLONNES_PAR_LIGNE * LIGNES_PORTE_A;
+  const TOTAL_CROCHETS = CROCHETS_PORTE_A + COLONNES_PAR_LIGNE * LIGNES_PORTE_B;
+
   const LIBELLES_ROLE = {
     admin: "Administrateur",
     utilisateur: "Accès limité",
@@ -60,8 +67,8 @@ const App = (() => {
   const els = {};
 
   function capterElements() {
-    els.grille = document.getElementById("grille-creneaux");
-    els.etatVide = document.getElementById("etat-vide");
+    els.porteA = document.getElementById("porte-a");
+    els.porteB = document.getElementById("porte-b");
     els.recherche = document.getElementById("champ-recherche");
     els.filtreStatut = document.getElementById("filtre-statut");
     els.filtreType = document.getElementById("filtre-type");
@@ -201,48 +208,72 @@ const App = (() => {
 
   function trousseauxFiltres() {
     const q = etat.recherche.trim().toLowerCase();
-    return [...etat.donnees.trousseaux]
-      .sort((a, b) => (a.crochet ?? 999) - (b.crochet ?? 999))
-      .filter((t) => {
-        if (etat.filtreStatut !== "toutes" && t.statut !== etat.filtreStatut) return false;
-        if (etat.filtreType !== "toutes" && t.type !== etat.filtreType) return false;
-        if (!q) return true;
-        const cible = [
-          t.nom,
-          t.detenteur,
-          String(t.crochet ?? ""),
-          ...t.clefs.map((c) => `${c.repere} ${c.code}`),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        return cible.includes(q);
-      });
+    return etat.donnees.trousseaux.filter((t) => {
+      if (etat.filtreStatut !== "toutes" && t.statut !== etat.filtreStatut) return false;
+      if (etat.filtreType !== "toutes" && t.type !== etat.filtreType) return false;
+      if (!q) return true;
+      const cible = [
+        t.nom,
+        t.detenteur,
+        String(t.crochet ?? ""),
+        ...t.clefs.map((c) => `${c.repere} ${c.code}`),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return cible.includes(q);
+    });
+  }
+
+  function trousseauParCrochet(numero) {
+    return etat.donnees.trousseaux.find((t) => t.crochet === numero) || null;
+  }
+
+  /** Premier numéro de crochet libre dans l'armoire (1 à 49), ou null si elle est pleine. */
+  function premierCrochetLibre() {
+    const occupes = new Set(etat.donnees.trousseaux.map((t) => t.crochet));
+    for (let n = 1; n <= TOTAL_CROCHETS; n++) {
+      if (!occupes.has(n)) return n;
+    }
+    return null;
   }
 
   function rendre() {
-    const liste = trousseauxFiltres();
-    els.grille.innerHTML = "";
+    const idsCorrespondants = new Set(trousseauxFiltres().map((t) => t.id));
+    const nombreOccupes = etat.donnees.trousseaux.length;
     els.compteur.textContent =
-      liste.length === 0 ? "Aucun trousseau" : liste.length === 1 ? "1 trousseau" : `${liste.length} trousseaux`;
+      nombreOccupes === 0
+        ? "Aucun trousseau"
+        : `${idsCorrespondants.size} / ${nombreOccupes} trousseau${nombreOccupes > 1 ? "x" : ""} affiché${idsCorrespondants.size > 1 ? "s" : ""} · ${TOTAL_CROCHETS - nombreOccupes} crochet${TOTAL_CROCHETS - nombreOccupes > 1 ? "s" : ""} libre${TOTAL_CROCHETS - nombreOccupes > 1 ? "s" : ""}`;
 
-    els.etatVide.hidden = liste.length !== 0;
+    els.porteA.innerHTML = "";
+    els.porteB.innerHTML = "";
 
-    for (const trousseau of liste) {
-      els.grille.appendChild(construireCreneau(trousseau));
+    for (let numero = 1; numero <= TOTAL_CROCHETS; numero++) {
+      const trousseau = trousseauParCrochet(numero);
+      const visible = trousseau && idsCorrespondants.has(trousseau.id);
+      const cible = numero <= CROCHETS_PORTE_A ? els.porteA : els.porteB;
+      cible.appendChild(construireCreneau(numero, visible ? trousseau : null));
     }
   }
 
-  function construireCreneau(trousseau) {
+  function construireCreneau(numero, trousseau) {
     const frag = els.gabaritCreneau.content.cloneNode(true);
     const creneau = frag.querySelector(".creneau");
+    frag.querySelector(".creneau__numero").textContent = `N°${numero}`;
+
+    if (!trousseau) {
+      creneau.classList.add("creneau--vide");
+      creneau.setAttribute("aria-label", `Crochet ${numero}, libre`);
+      creneau.addEventListener("click", () => ouvrirFormulaire(null, numero));
+      return frag;
+    }
+
     creneau.dataset.id = trousseau.id;
     creneau.classList.add(
       trousseau.statut === "emprunte" ? "statut-emprunte" : "statut-disponible",
       trousseau.type === "baie" ? "type-baie" : "type-batiment"
     );
-
-    frag.querySelector(".creneau__numero").textContent = trousseau.crochet ? `N°${trousseau.crochet}` : "—";
 
     const iconeType = frag.querySelector(".etiquette__type-icone");
     iconeType.innerHTML = trousseau.type === "baie" ? ICONE_CLE_BAIE : ICONE_CLE_BATIMENT.repeat(3);
@@ -358,7 +389,7 @@ const App = (() => {
     });
   }
 
-  function ouvrirFormulaire(id = null) {
+  function ouvrirFormulaire(id = null, crochetPrefill = null) {
     if (!estAdmin()) return;
     const trousseau = id ? trouverTrousseau(id) : null;
     els.formTrousseau.reset();
@@ -374,9 +405,7 @@ const App = (() => {
       trousseau.clefs.forEach((c) => els.listeClefsForm.appendChild(creerLigneClef(c.repere, c.code)));
     } else {
       els.champType.value = "batiment";
-      const prochainCrochet =
-        etat.donnees.trousseaux.reduce((max, t) => Math.max(max, t.crochet || 0), 0) + 1;
-      els.formTrousseau.elements["crochet"].value = prochainCrochet;
+      els.formTrousseau.elements["crochet"].value = crochetPrefill || premierCrochetLibre() || "";
       els.listeClefsForm.appendChild(creerLigneClef());
     }
 
@@ -408,6 +437,16 @@ const App = (() => {
     const crochet = parseInt(donneesForm.get("crochet"), 10) || null;
     const type = donneesForm.get("type");
     const notes = donneesForm.get("notes").trim();
+
+    if (!crochet || crochet < 1 || crochet > TOTAL_CROCHETS) {
+      window.alert(`Choisissez un numéro de crochet entre 1 et ${TOTAL_CROCHETS}.`);
+      return;
+    }
+    const occupantActuel = trousseauParCrochet(crochet);
+    if (occupantActuel && occupantActuel.id !== id) {
+      window.alert(`Le crochet n°${crochet} est déjà occupé par « ${occupantActuel.nom} ». Choisissez-en un autre.`);
+      return;
+    }
 
     if (id) {
       const trousseau = trouverTrousseau(id);
