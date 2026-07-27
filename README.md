@@ -36,11 +36,33 @@ de données distante, aucun tracker.
 
 - **Trousseau bâtiment** — plusieurs clés physiques sur un même anneau
   (porte principale, local, sas…), dont celle qui ouvre le bâtiment où se
-  trouve la baie.
-- **Clé de baie** — une seule clé, qui n'ouvre que la baie.
+  trouve la baie. Dégradé **or/ambre**.
+- **Clé de baie** — une seule clé, qui n'ouvre que la baie. Dégradé **vert**.
+
+Ces deux couleurs sont strictement réservées à cet usage : elles n'apparaissent
+nulle part ailleurs dans l'interface (boutons, focus, etc. utilisent une
+troisième couleur de marque neutre, indigo/bleu, définie séparément dans
+`css/styles.css` sous `--marque-*`).
 
 Chaque trousseau a un numéro de crochet, un statut (suspendu / décroché),
 et génère un QR code identifiant à imprimer sur le porte-clés physique.
+
+## Disposition physique de l'armoire
+
+L'armoire a une capacité fixe de **49 crochets numérotés**, répartis sur deux
+portes de 7 crochets par ligne :
+
+- Porte gauche : 4 rangées → crochets n°1 à 28
+- Porte droite : 3 rangées → crochets n°29 à 49
+
+Les 49 crochets s'affichent toujours, qu'ils soient occupés ou non — un
+crochet libre apparaît nu (juste le crochet et son numéro) et peut être
+cliqué directement pour y accrocher un nouveau trousseau (le formulaire
+s'ouvre avec ce numéro de crochet déjà rempli). Deux trousseaux ne peuvent
+pas partager le même crochet : le formulaire refuse l'enregistrement si le
+numéro choisi est déjà occupé par un autre trousseau. Le numéro de crochet
+est donc obligatoire, entre 1 et 49 (`js/app.js`, constantes
+`COLONNES_PAR_LIGNE`, `LIGNES_PORTE_A`, `LIGNES_PORTE_B`).
 
 ## Architecture
 

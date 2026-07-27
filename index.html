@@ -36,13 +36,17 @@
   <!-- Dégradés SVG partagés par les icônes "clé" de l'interface -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
-      <linearGradient id="degrade-batiment" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="degrade-marque" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stop-color="#6f6ad8" />
         <stop offset="100%" stop-color="#4fa7e8" />
       </linearGradient>
+      <linearGradient id="degrade-batiment" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#e0a512" />
+        <stop offset="100%" stop-color="#ffd873" />
+      </linearGradient>
       <linearGradient id="degrade-baie" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#23b3ba" />
-        <stop offset="100%" stop-color="#57d6b8" />
+        <stop offset="0%" stop-color="#1f9e5c" />
+        <stop offset="100%" stop-color="#7be08a" />
       </linearGradient>
     </defs>
   </svg>
@@ -52,8 +56,8 @@
   <section id="ecran-connexion" class="ecran-connexion">
     <div class="ecran-connexion__panneau">
       <svg class="ecran-connexion__icone" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="9" r="4.2" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8"/>
-        <path d="M12 13.2 V19 M9.3 19 H14.7" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="12" cy="9" r="4.2" fill="none" stroke="url(#degrade-marque)" stroke-width="1.8"/>
+        <path d="M12 13.2 V19 M9.3 19 H14.7" fill="none" stroke="url(#degrade-marque)" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
       <h1>Boîte à clés</h1>
 
@@ -103,9 +107,9 @@
     <header class="entete">
       <div class="entete__identite">
         <svg class="entete__icone" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="8" cy="8" r="5" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8"/>
-          <circle cx="8" cy="8" r="1.4" fill="url(#degrade-batiment)"/>
-          <path d="M12 11.5 L21 20.5 M17.5 16 L20 13.5 M15 18.5 L17 16.5" fill="none" stroke="url(#degrade-batiment)" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="8" cy="8" r="5" fill="none" stroke="url(#degrade-marque)" stroke-width="1.8"/>
+          <circle cx="8" cy="8" r="1.4" fill="url(#degrade-marque)"/>
+          <path d="M12 11.5 L21 20.5 M17.5 16 L20 13.5 M15 18.5 L17 16.5" fill="none" stroke="url(#degrade-marque)" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
         <div>
           <h1>Boîte à clés</h1>
@@ -155,15 +159,11 @@
 
       <div class="armoire">
         <div class="armoire__plaque">Armoire à clés</div>
-        <section id="grille-creneaux" class="grille-creneaux" aria-live="polite"></section>
-      </div>
-
-      <div id="etat-vide" class="etat-vide" hidden>
-        <svg viewBox="0 0 24 24" aria-hidden="true" class="etat-vide__icone">
-          <circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.4"/>
-          <path d="M12.5 12.5 L20 20" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-        </svg>
-        <p>Aucun trousseau ne correspond à cette recherche.</p>
+        <div class="armoire__portes">
+          <section id="porte-a" class="porte" aria-label="Porte gauche — 4 rangées de 7 crochets"></section>
+          <div class="armoire__charniere" aria-hidden="true"></div>
+          <section id="porte-b" class="porte" aria-label="Porte droite — 3 rangées de 7 crochets"></section>
+        </div>
       </div>
 
     </main>
@@ -221,7 +221,7 @@
           </label>
           <label class="champ champ--crochet">
             <span>N° de crochet</span>
-            <input type="number" name="crochet" min="1" max="999" />
+            <input type="number" name="crochet" min="1" max="49" required />
           </label>
         </div>
 
