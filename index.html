@@ -70,6 +70,10 @@
             <input type="text" name="nom" maxlength="40" autocomplete="username" required />
           </label>
           <label class="champ champ--connexion">
+            <span>Email</span>
+            <input type="email" name="email" autocomplete="email" required />
+          </label>
+          <label class="champ champ--connexion">
             <span>Mot de passe</span>
             <input type="password" name="motdepasse" autocomplete="new-password" minlength="6" required />
           </label>
@@ -78,6 +82,7 @@
             <input type="password" name="confirmation" autocomplete="new-password" minlength="6" required />
           </label>
           <p id="erreur-initialisation" class="erreur-connexion" hidden></p>
+          <p id="info-initialisation" class="info-connexion" hidden></p>
           <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Créer le compte administrateur</button>
         </form>
       </div>
@@ -87,14 +92,14 @@
         <p class="ecran-connexion__texte">Identifiez-vous pour ouvrir l'armoire.</p>
         <form id="form-connexion" autocomplete="off">
           <label class="champ champ--connexion">
-            <span>Nom</span>
-            <input type="text" name="nom" maxlength="40" autocomplete="username" required />
+            <span>Email</span>
+            <input type="email" name="email" autocomplete="email" required />
           </label>
           <label class="champ champ--connexion">
             <span>Mot de passe</span>
             <input type="password" name="motdepasse" autocomplete="current-password" required />
           </label>
-          <p id="erreur-connexion" class="erreur-connexion" hidden>Nom ou mot de passe incorrect.</p>
+          <p id="erreur-connexion" class="erreur-connexion" hidden>Email ou mot de passe incorrect.</p>
           <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Déverrouiller</button>
         </form>
       </div>
@@ -113,17 +118,12 @@
         </svg>
         <div>
           <h1>Boîte à clés</h1>
-          <p class="entete__sous-titre">Armoire numérique — 100&nbsp;% locale, sans serveur</p>
+          <p class="entete__sous-titre">Armoire numérique — données sécurisées sur Supabase</p>
         </div>
       </div>
 
       <div class="entete__fichier">
-        <span id="etiquette-fichier" class="etiquette-fichier" hidden></span>
-        <input type="file" id="input-importer" accept="application/json" hidden />
-        <button type="button" id="bouton-importer" class="bouton bouton--discret">Importer un JSON</button>
         <button type="button" id="bouton-exporter" class="bouton bouton--discret">Exporter en JSON</button>
-        <button type="button" id="bouton-ouvrir-fichier" class="bouton bouton--discret" hidden>Ouvrir un fichier local</button>
-        <button type="button" id="bouton-enregistrer-fichier" class="bouton bouton--discret" hidden>Enregistrer</button>
         <button type="button" id="bouton-utilisateurs" class="bouton bouton--discret" hidden>Utilisateurs</button>
         <button type="button" id="bouton-deconnexion" class="bouton bouton--discret" hidden>Se déconnecter</button>
       </div>
@@ -158,11 +158,20 @@
       <p id="compteur-resultats" class="compteur" aria-live="polite"></p>
 
       <div class="armoire">
-        <div class="armoire__plaque">Armoire à clés</div>
+        <div class="armoire__entete">
+          <div class="armoire__plaque">Armoire à clés</div>
+          <div class="armoire__selecteur-porte" role="tablist" aria-label="Choisir la porte à afficher">
+            <button type="button" class="bouton-porte" data-porte="a" role="tab" aria-selected="true">
+              Porte A <span class="bouton-porte__plage">n° 1–40</span>
+            </button>
+            <button type="button" class="bouton-porte" data-porte="b" role="tab" aria-selected="false">
+              Porte B <span class="bouton-porte__plage">n° 41–70</span>
+            </button>
+          </div>
+        </div>
         <div class="armoire__portes">
-          <section id="porte-a" class="porte" aria-label="Porte gauche — 4 rangées de 7 crochets"></section>
-          <div class="armoire__charniere" aria-hidden="true"></div>
-          <section id="porte-b" class="porte" aria-label="Porte droite — 3 rangées de 7 crochets"></section>
+          <section id="porte-a" class="porte" role="tabpanel" aria-label="Porte A — 4 rangées de 10 crochets"></section>
+          <section id="porte-b" class="porte" role="tabpanel" aria-label="Porte B — 3 rangées de 10 crochets" hidden></section>
         </div>
       </div>
 
@@ -221,7 +230,7 @@
           </label>
           <label class="champ champ--crochet">
             <span>N° de crochet</span>
-            <input type="number" name="crochet" min="1" max="49" required />
+            <input type="number" name="crochet" min="1" max="70" required />
           </label>
         </div>
 
@@ -256,30 +265,21 @@
       <p class="dialogue__intro">Un compte « Accès limité » peut consulter l'armoire, emprunter et restituer un trousseau — rien d'autre.</p>
       <ul id="liste-utilisateurs" class="liste-utilisateurs"></ul>
 
-      <form id="form-utilisateur" class="formulaire">
+      <div class="ajout-utilisateur-info">
         <h3>Ajouter un utilisateur</h3>
-        <label class="champ">
-          <span>Nom</span>
-          <input type="text" name="nom" maxlength="40" required />
-        </label>
-        <label class="champ">
-          <span>Mot de passe</span>
-          <input type="password" name="motdepasse" minlength="6" autocomplete="new-password" required />
-        </label>
-        <label class="champ">
-          <span>Rôle</span>
-          <select name="role">
-            <option value="utilisateur">Accès limité (consulter, emprunter, restituer)</option>
-            <option value="admin">Administrateur (accès complet)</option>
-          </select>
-        </label>
-        <p id="erreur-utilisateur" class="erreur-connexion" hidden></p>
-        <button type="submit" class="bouton bouton--brass bouton--pleine-largeur">Ajouter</button>
-      </form>
+        <p>
+          Pour la sécurité des mots de passe, un nouveau compte se crée depuis le
+          <strong>tableau de bord Supabase</strong> (Authentication → Users →
+          Add user), puis en associant son rôle avec une requête SQL fournie
+          dans le README — pas depuis cette fenêtre. Cela garantit qu'aucun mot
+          de passe ne transite ni n'est visible ailleurs que dans la tête de la
+          personne concernée.
+        </p>
+      </div>
     </dialog>
 
     <footer class="pied-de-page">
-      <p>Application statique — aucune donnée n'est envoyée à un serveur. Pensez à exporter régulièrement votre fichier JSON pour le sauvegarder.</p>
+      <p>Données stockées sur Supabase (authentification et accès contrôlés côté serveur). Le bouton « Exporter en JSON » ci-dessus permet une sauvegarde manuelle à tout moment.</p>
       <p class="pied-de-page__copyright">© 2026 Shams Guettaf — Anthropotech Lab. Tous droits réservés.</p>
     </footer>
 
@@ -294,7 +294,10 @@
     <p class="etiquette-impression__crochet"></p>
   </div>
 
-  <script src="js/storage.js"></script>
+  <script src="js/vendor/supabase.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/data.js"></script>
   <script src="js/vendor/qrcode.js"></script>
   <script src="js/vendor/qrcode-utf8.js"></script>
   <script src="js/app.js"></script>
