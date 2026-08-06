@@ -5,22 +5,6 @@ Voir [`LICENSE.md`](./LICENSE.md). Ce dépôt est publié pour démonstration et
 usage personnel ; toute réutilisation, modification ou redistribution
 nécessite une autorisation écrite préalable.
 
-> **Protéger l'idée avant de publier sur GitHub — ce qui marche vraiment**
-> En droit français, le droit d'auteur naît automatiquement à la création
-> de l'œuvre (Code de la propriété intellectuelle, art. L111-1) : aucun
-> dépôt n'est obligatoire pour être protégé. Ce qui compte en pratique,
-> c'est de pouvoir *prouver la date de création* si un litige survient :
-> - L'historique Git (commits horodatés) sert déjà de preuve d'antériorité
->   simple, à condition de ne pas réécrire l'historique (`git rebase`,
->   force-push) après coup.
-> - Pour une preuve plus solide, un dépôt auprès de l'APP (Agence pour la
->   Protection des Programmes) ou un constat d'huissier/notaire est
->   recommandé.
-> - Le code du front-end (HTML/CSS/JS) reste consultable sur un dépôt
->   GitHub Pages public — la licence l'interdit juridiquement mais n'en
->   empêche pas la lecture. Les **données** (armoire, comptes), elles, ne
->   sont plus dans ce dépôt du tout : elles vivent sur Supabase, protégées
->   par de vraies règles d'accès côté serveur (voir plus bas).
 
 ## Ce que fait l'application
 
