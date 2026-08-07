@@ -3,7 +3,6 @@
  * Voir LICENSE.md — reproduction et réutilisation interdites sans
  * autorisation écrite préalable.
  */
-
 /**
  * supabase-config.js
  * ---------------------------------------------------------------------
@@ -21,6 +20,5 @@
  * côté serveur, jamais dans un fichier livré au navigateur).
  * ---------------------------------------------------------------------
  */
-
-const SUPABASE_URL = "https://okhrkfqxlnpebauakwgq.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_O36zqga1UCUIa1wPD328lg_m-ZO-vaU";
+const SUPABASE_URL = "https://wjcnodrcyocdxdzpgkbt.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndqY25vZHJjeW9jZHhkenBna2J0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxMjA2NDYsImV4cCI6MjEwMTY5NjY0Nn0.H5NmbYpxWdaUz--Ra-b5o42_M3HgFkn0pV424ect1iw";
